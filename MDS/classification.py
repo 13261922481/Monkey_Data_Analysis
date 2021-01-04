@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter import messagebox
 import os
 import sys
 import numpy as np
@@ -117,6 +118,8 @@ class cl_app:
         self.root.tkraise()
         self.root.focus_force()
         self.root.resizable(False, False)
+
+        parent.iconify()
         
         self.frame = ttk.Frame(self.root, width=w, height=h)
         self.frame.place(x=0, y=0)
@@ -125,24 +128,8 @@ class cl_app:
         e1 = ttk.Entry(self.frame, font=myfont1, width=40)
         e1.place(x=120, y=10)
         e1.insert(0, "C:/Users/csded/Documents/Python/Anaconda/Machine Learning/data/Pokemon.xlsx")
-        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
-        e2.place(x=150, y=203)
-        e2.insert(0, "5")
-
-        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=200)
-        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
-        rep_entry.place(x=330, y=203)
-        rep_entry.insert(0, "1")
         
         ttk.Button(self.frame, text='Choose file', command=lambda: open_file(self, e1)).place(x=490, y=10)
-        
-        self.x_st_var = tk.StringVar(value='Where needed')
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=170)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=13,
-                                        values=['None', 'Where needed', 'everywhere'])
-        self.combobox2.place(x=150,y=175)
-        
-        self.dummies_var = tk.IntVar(value=0)
         
         ttk.Label(self.frame, text='List number:').place(x=120,y=50)
         training_sheet_entry = ttk.Entry(self.frame, textvariable=self.training.sheet, font=myfont1, width=3)
@@ -150,17 +137,15 @@ class cl_app:
                 
         ttk.Button(self.frame, text='Load data ', command=lambda: load_data(self, self.training, e1, 'training')).place(x=490, y=50)
         
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=175)
         cb1 = ttk.Checkbutton(self.frame, text="header", variable=self.training.header_var, takefocus=False)
         cb1.place(x=10, y=50)
         
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=100)
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
         self.tr_data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.tr_data_status.place(x=120, y=100)
+        self.tr_data_status.place(x=120, y=95)
 
         ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.training, 'training', parent)).place(x=230, y=100)
+            command=lambda: Data_Preview(self, self.training, 'training', parent)).place(x=230, y=95)
         #methods parameters
         self.rc_include_comp = tk.BooleanVar(value=True)
         self.rc_alpha = tk.StringVar(value='1.0')
@@ -286,23 +271,25 @@ class cl_app:
         self.mlpc_max_fun = tk.StringVar(value='15000')
         
         def compare_methods(prev, main):
+            try:
+                x_from = main.data.columns.get_loc(main.x_from_var.get())
+                x_to = main.data.columns.get_loc(main.x_to_var.get()) + 1
+            except:
+                x_from = int(main.x_from_var.get())
+                x_to = int(main.x_to_var.get()) + 1
             if self.dummies_var.get()==0:
                 try:
-                    prev.X = main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())]
+                    prev.X = main.data.iloc[:,x_from : x_to]
                     prev.y = main.data[self.y_var.get()]
                 except:
-                    prev.X = main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())]
+                    prev.X = main.data.iloc[:,x_from : x_to]
                     prev.y = main.data[int(self.y_var.get())]
             elif self.dummies_var.get()==1:
                 try:
-                    X=main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())]
-                except:
-                    X=main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())]
-                try:
-                    prev.X = pd.get_dummies(X)
+                    prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
                     prev.y = main.data[self.y_var.get()]
                 except:
-                    prev.X = pd.get_dummies(X)
+                    prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
                     prev.y = main.data[int(self.y_var.get())]
             from sklearn import preprocessing
             scaler = preprocessing.StandardScaler()
@@ -329,7 +316,7 @@ class cl_app:
                                              max_leaf_nodes=(int(self.dtc_max_leaf_nodes.get()) if (self.dtc_max_leaf_nodes.get() != 'None') else None),
                                              min_impurity_decrease=float(self.dtc_min_impurity_decrease.get()),
                                              ccp_alpha=float(self.dtc_ccp_alpha.get()))
-                if self.x_st_var.get() == 'everywhere':
+                if self.x_st_var.get() == 'Yes':
                     dtc_scores = cross_val_score(dtc, prev.X_St, prev.y, cv=folds)
                 else:
                     dtc_scores = cross_val_score(dtc, prev.X, prev.y, cv=folds)
@@ -344,7 +331,7 @@ class cl_app:
                                      tol=float(self.rc_tol.get()), solver=self.rc_solver.get(),
                                      random_state=(int(self.rc_random_state.get()) if 
                                                    (self.rc_random_state.get() != 'None') else None))
-                if self.x_st_var.get() == 'everywhere':
+                if self.x_st_var.get() == 'Yes':
                     rc_scores = cross_val_score(rc, prev.X_St, prev.y, cv=folds)
                 else:
                     rc_scores = cross_val_score(rc, prev.X, prev.y, cv=folds)
@@ -374,7 +361,7 @@ class cl_app:
                                             max_samples=(float(self.rfc_max_samples.get()) if '.' in self.rfc_max_samples.get() 
                                                            else int(self.rfc_max_samples.get()) if (self.rfc_max_samples.get() != 'None') 
                                                            else None))
-                if self.x_st_var.get() == 'everywhere':
+                if self.x_st_var.get() == 'Yes':
                     rfc_scores = cross_val_score(rfc, prev.X_St, prev.y, cv=folds)
                 else:
                     rfc_scores = cross_val_score(rfc, prev.X, prev.y, cv=folds)
@@ -391,7 +378,7 @@ class cl_app:
                           decision_function_shape=self.svc_decision_function_shape.get(),
                           break_ties=self.svc_break_ties.get(), 
                           random_state=(int(self.svc_random_state.get()) if (self.svc_random_state.get() != 'None') else None))
-                if self.x_st_var.get() == 'None':
+                if self.x_st_var.get() == 'No':
                     svc_scores = cross_val_score(svc, prev.X, prev.y, cv=folds)
                 else:
                     svc_scores = cross_val_score(svc, prev.X_St, prev.y, cv=folds)
@@ -414,7 +401,7 @@ class cl_app:
                                      n_iter_no_change=int(self.sgdc_n_iter_no_change.get()), warm_start=self.sgdc_warm_start.get(),
                                      average=(True if self.sgdc_average.get()=='True' else False 
                                               if self.sgdc_average.get()=='False' else int(self.sgdc_average.get())))
-                if self.x_st_var.get() == 'None':
+                if self.x_st_var.get() == 'No':
                     sgdc_scores = cross_val_score(sgdc, prev.X, prev.y, cv=folds)
                 else:
                     sgdc_scores = cross_val_score(sgdc, prev.X_St, prev.y, cv=folds)
@@ -428,7 +415,7 @@ class cl_app:
                                            metric=self.knc_metric.get(), 
                                            n_jobs=(int(self.knc_n_jobs.get()) if (self.knc_n_jobs.get() 
                                                                                                 != 'None') else None))
-                if self.x_st_var.get() == 'None':
+                if self.x_st_var.get() == 'No':
                     knc_scores = cross_val_score(knc, prev.X, prev.y, cv=folds)
                 else:
                     knc_scores = cross_val_score(knc, prev.X_St, prev.y, cv=folds)
@@ -444,7 +431,7 @@ class cl_app:
                                                 multi_class=self.gpc_multi_class.get(), 
                                                 n_jobs=(int(self.gpc_n_jobs.get()) if 
                                                               (self.gpc_n_jobs.get() != 'None') else None))
-                if self.x_st_var.get() == 'None':
+                if self.x_st_var.get() == 'No':
                     gpc_scores = cross_val_score(gpc, prev.X, prev.y, cv=folds)
                 else:
                     gpc_scores = cross_val_score(gpc, prev.X_St, prev.y, cv=folds)
@@ -471,96 +458,128 @@ class cl_app:
                                      epsilon=float(self.mlpc_epsilon.get()), 
                                      n_iter_no_change=int(self.mlpc_n_iter_no_change.get()),
                                      max_fun=int(self.mlpc_max_fun.get()))
-                if self.x_st_var.get() == 'everywhere':
+                if self.x_st_var.get() == 'Yes':
                     mlpc_scores = cross_val_score(mlpc, prev.X_St, prev.y, cv=folds)
                 else:
                     mlpc_scores = cross_val_score(mlpc, prev.X, prev.y, cv=folds)
                 self.scores['mlpc'] = mlpc_scores.mean()
             show_rel_button.place(x=400, y=180)
+
+        def try_compare_methods(prev, main):
+            try:
+                compare_methods(prev, main)
+            except ValueError as e:
+                messagebox.showerror(message='Error: "{}"'.format(e))
         ttk.Button(self.frame, text="Methods' specifications", 
                   command=lambda: cl_mtds_specification(self, parent)).place(x=400, y=100)
-        ttk.Button(self.frame, text='Perform comparison', command=lambda: compare_methods(self, self.training)).place(x=400, y=140)
+        ttk.Button(self.frame, text='Perform comparison', command=lambda: try_compare_methods(self, self.training)).place(x=400, y=140)
         show_rel_button = ttk.Button(self.frame, text='Show Results', command=lambda: self.Comp_results(self, parent))
         
         ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
         self.y_var = tk.StringVar()
-        self.combobox1 = ttk.Combobox(self.frame, textvariable=self.y_var, width=13, values=[])
-        self.combobox1.place(x=100,y=142)
+        self.combobox1 = ttk.Combobox(self.frame, textvariable=self.y_var, width=14, values=[])
+        self.combobox1.place(x=105,y=142)
         
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=205, y=140)
-        self.tr_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.training.x_from_var, width=4, values=[])
-        self.tr_x_from_combobox.place(x=255, y=142)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=305, y=140)
-        self.tr_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.training.x_to_var, width=4, values=[])
-        self.tr_x_to_combobox.place(x=325, y=142)
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.tr_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.training.x_from_var, width=14, values=[])
+        self.tr_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.tr_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.training.x_to_var, width=14, values=[])
+        self.tr_x_to_combobox.place(x=275, y=157)
 
-        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=200)
+        self.x_st_var = tk.StringVar(value='If needed')
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
+                                        values=['No', 'If needed', 'Yes'])
+        self.combobox2.place(x=150,y=180)
+
+        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=205)
+        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
+        e2.place(x=150, y=207)
+        e2.insert(0, "5")
+
+        self.dummies_var = tk.IntVar(value=0)
+        cb2 = ttk.Checkbutton(self.frame, text="Dummies", variable=self.dummies_var, takefocus=False)
+        cb2.place(x=270, y=182)
+
+        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=205)
+        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
+        rep_entry.place(x=330, y=208)
+        rep_entry.insert(0, "1")
+
+        # sep1 = ttk.Separator(self.frame, orient=tk.HORIZONTAL)
+        # sep1.place(y=235, relwidth=1.0)
         
         ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=250)
         pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
         pr_data_entry.place(x=140, y=250)
         pr_data_entry.insert(0, "C:/Users/csded/Documents/Python/Anaconda/Machine Learning/data/Pokemon.xlsx")
         
-        ttk.Button(self.frame, text='Choose file', command=lambda: open_file(self, pr_data_entry)).place(x=490, y=245)
+        ttk.Button(self.frame, text='Choose file', command=lambda: open_file(self, pr_data_entry)).place(x=490, y=250)
         
         ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=295)
         pr_sheet_entry = ttk.Entry(self.frame, textvariable=self.prediction.sheet, font=myfont1, width=3)
         pr_sheet_entry.place(x=215,y=297)
         
-        ttk.Button(self.frame, text='Load data ', command=lambda: load_data(self, self.prediction, pr_data_entry, 'prediction')).place(x=490, y=295)
+        ttk.Button(self.frame, text='Load data ', command=lambda: load_data(self, self.prediction, pr_data_entry, 'prediction')).place(x=490, y=290)
         
         cb4 = ttk.Checkbutton(self.frame, text="header", variable=self.prediction.header_var, takefocus=False)
         cb4.place(x=10, y=290)
         
-        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=350)
+        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=345)
         self.pr_data_status = ttk.Label(self.frame, text='Not Loaded', font=myfont)
-        self.pr_data_status.place(x=120, y=350)
+        self.pr_data_status.place(x=120, y=345)
 
-        ttk.Button(self.frame, text='View/Change', command=lambda: Data_Preview(self, self.prediction, 'prediction', parent)).place(x=230, y=350)
+        ttk.Button(self.frame, text='View/Change', command=lambda: 
+                   Data_Preview(self, self.prediction, 'prediction', parent)).place(x=230, y=345)
         
         self.pr_method = tk.StringVar(value='Decision Tree')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, values=['Decision Tree', 'Ridge',
-                                                                                         'Random Forest',
-                                                                                        'Support Vector', 'SGD', 
-                                                                                        'Nearest Neighbor', 'Gaussian Process', 
-                                                                                        'Multi-layer Perceptron'])
-        self.combobox9.place(x=200,y=425)
-        ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=420)
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, values=['Decision Tree', 'Ridge',
+                                                                                                 'Random Forest',
+                                                                                                 'Support Vector', 'SGD', 
+                                                                                                 'Nearest Neighbor', 'Gaussian Process', 
+                                                                                                 'Multi-layer Perceptron'])
+        self.combobox9.place(x=105,y=402)
+        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=400)
+
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=425)
+        self.place_result_var = tk.StringVar(value='End')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, width=10, values=['Start', 'End'])
+        self.combobox9.place(x=120,y=427)
         
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=205, y=390)
-        self.pr_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.prediction.x_from_var, width=4, values=[])
-        self.pr_x_from_combobox.place(x=255, y=390)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=305, y=390)
-        self.pr_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.prediction.x_to_var, width=4, values=[])
-        self.pr_x_to_combobox.place(x=325, y=390)
-        
-        self.x2_st_var = tk.StringVar(value='If needed')
-        self.combobox10 = ttk.Combobox(self.frame, textvariable=self.x2_st_var, 
-                                        values=['No', 'If needed', 'Yes'])
-        self.combobox10.current(1)
-        self.combobox10.place(x=200,y=455)
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=450)
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=400)
+        self.pr_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.prediction.x_from_var, width=14, values=[])
+        self.pr_x_from_combobox.place(x=275, y=402)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=425)
+        self.pr_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.prediction.x_to_var, width=14, values=[])
+        self.pr_x_to_combobox.place(x=275, y=427)
         
         def cl_predict_class(method):
+            try:
+                tr_x_from = self.training.data.columns.get_loc(self.training.x_from_var.get())
+                tr_x_to = self.training.data.columns.get_loc(self.training.x_to_var.get()) + 1
+                pr_x_from = self.prediction.data.columns.get_loc(self.prediction.x_from_var.get())
+                pr_x_to = self.prediction.data.columns.get_loc(self.prediction.x_to_var.get()) + 1
+            except:
+                tr_x_from = int(self.training.x_from_var.get())
+                tr_x_to = int(self.training.x_to_var.get()) + 1
+                pr_x_from = int(self.prediction.x_from_var.get())
+                pr_x_to = int(self.prediction.x_to_var.get()) + 1
             if self.dummies_var.get()==0:
                 try:
-                    training_X = self.training.data.iloc[:,(int(self.training.x_from_var.get())-1): int(self.training.x_to_var.get())]
+                    training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                     training_y = self.training.data[self.y_var.get()]
                 except:
-                    training_X = self.training.data.iloc[:,(int(self.training.x_from_var.get())-1): int(self.training.x_to_var.get())]
+                    training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                     training_y = self.training.data[int(self.y_var.get())]
-                X = self.prediction.data.iloc[:,(int(self.prediction.x_from_var.get())-1): int(self.prediction.x_to_var.get())]
+                X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
             elif self.dummies_var.get()==1:
-                X = pd.get_dummies(self.prediction.data.iloc[:,(int(self.prediction.x_from_var.get())-1): int(self.prediction.x_to_var.get())])
+                X = pd.get_dummies(self.prediction.data.iloc[:,pr_x_from : pr_x_to])
                 try:
-                    training_X=self.training.data.iloc[:,(int(self.training.x_from_var.get())-1): int(self.training.x_to_var.get())]
-                except:
-                    training_X=self.training.data.iloc[:,(int(self.training.x_from_var.get())-1): int(self.training.x_to_var.get())]
-                try:
-                    training_X = pd.get_dummies(training_X)
+                    training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
                     training_y = self.training.data[self.y_var.get()]
                 except:
-                    training_X = pd.get_dummies(training_X)
+                    training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
                     training_y = self.training.data[int(self.y_var.get())]
             from sklearn import preprocessing
             scaler = preprocessing.StandardScaler()
@@ -584,7 +603,7 @@ class cl_app:
                                          max_leaf_nodes=(int(self.dtc_max_leaf_nodes.get()) if (self.dtc_max_leaf_nodes.get() != 'None') else None),
                                          min_impurity_decrease=float(self.dtc_min_impurity_decrease.get()),
                                          ccp_alpha=float(self.dtc_ccp_alpha.get()))
-                if self.x2_st_var.get() == 'Yes':
+                if self.x_st_var.get() == 'Yes':
                     dtc.fit(training_X_st, training_y)
                     pr_values = dtc.predict(X_St)
                 else:
@@ -599,7 +618,7 @@ class cl_app:
                                      tol=float(self.rc_tol.get()), solver=self.rc_solver.get(),
                                      random_state=(int(self.rc_random_state.get()) if 
                                                    (self.rc_random_state.get() != 'None') else None))
-                if self.x2_st_var.get() == 'Yes':
+                if self.x_st_var.get() == 'Yes':
                     rc.fit(training_X_st, training_y)
                     pr_values = rc.predict(X_St)
                 else:
@@ -629,7 +648,7 @@ class cl_app:
                                             max_samples=(float(self.rfc_max_samples.get()) if '.' in self.rfc_max_samples.get() 
                                                            else int(self.rfc_max_samples.get()) if (self.rfc_max_samples.get() != 'None') 
                                                            else None))
-                if self.x2_st_var.get() == 'Yes':
+                if self.x_st_var.get() == 'Yes':
                     rfc.fit(training_X_St, training_y)
                     pr_values = rfc.predict(X_St)
                 else:
@@ -646,7 +665,7 @@ class cl_app:
                           decision_function_shape=self.svc_decision_function_shape.get(),
                           break_ties=self.svc_break_ties.get(), 
                           random_state=(int(self.svc_random_state.get()) if (self.svc_random_state.get() != 'None') else None))
-                if self.x2_st_var.get() == 'No':
+                if self.x_st_var.get() == 'No':
                     svc.fit(training_X, training_y)
                     pr_values = svc.predict(X)
                 else:
@@ -669,7 +688,7 @@ class cl_app:
                                      n_iter_no_change=int(self.sgdc_n_iter_no_change.get()), warm_start=self.sgdc_warm_start.get(),
                                      average=(True if self.sgdc_average.get()=='True' else False 
                                               if self.sgdc_average.get()=='False' else int(self.sgdc_average.get())))
-                if self.x2_st_var.get() == 'No':
+                if self.x_st_var.get() == 'No':
                     sgdc.fit(training_X, training_y)
                     pr_values = sgdc.predict(X)
                 else:
@@ -683,7 +702,7 @@ class cl_app:
                                            metric=self.knc_metric.get(), 
                                            n_jobs=(int(self.knc_n_jobs.get()) if (self.knc_n_jobs.get() 
                                                                                                 != 'None') else None))
-                if self.x2_st_var.get() == 'No':
+                if self.x_st_var.get() == 'No':
                     knc.fit(training_X, training_y)
                     pr_values = knc.predict(X)
                 else:
@@ -700,7 +719,7 @@ class cl_app:
                                                 multi_class=self.gpc_multi_class.get(), 
                                                 n_jobs=(int(self.gpc_n_jobs.get()) if 
                                                               (self.gpc_n_jobs.get() != 'None') else None))
-                if self.x2_st_var.get() == 'No':
+                if self.x_st_var.get() == 'No':
                     gpc.fit(training_X, training_y)
                     pr_values = gpc.predict(X)
                 else:
@@ -727,16 +746,26 @@ class cl_app:
                                      epsilon=float(self.mlpc_epsilon.get()), 
                                      n_iter_no_change=int(self.mlpc_n_iter_no_change.get()),
                                      max_fun=int(self.mlpc_max_fun.get()))
-                if self.x2_st_var.get() == 'Yes':
+                if self.x_st_var.get() == 'Yes':
                     mlpc.fit(training_X_St, training_y)
                     pr_values = mlpc.predict(X_St)
                 else:
                     mlpc.fit(training_X, training_y)
                     pr_values = mlpc.predict(X)
-            self.prediction.data['Class'] = pr_values
+
+            if self.place_result_var.get() == 'Start':
+                self.prediction.data.insert(0, 'Class', pr_values)
+            elif self.place_result_var.get() == 'End':
+                self.prediction.data['Class'] = pr_values
+
+        def try_cl_predict_class(method):
+            try:
+                cl_predict_class(method)
+            except ValueError as e:
+                messagebox.showerror(message='Error: "{}"'.format(e))
         
         ttk.Button(self.frame, text='Predict classes', 
-                  command=lambda: cl_predict_class(method=self.pr_method.get())).place(x=420, y=360)
+                  command=lambda: try_cl_predict_class(method=self.pr_method.get())).place(x=420, y=360)
         
         ttk.Button(self.frame, text='Save results', 
                   command=lambda: save_results(self, self.prediction)).place(x=420, y=400)
@@ -781,6 +810,12 @@ class cl_mtds_specification:
                 self.canvas.xview_scroll(move, "units")
         self.canvas.bind_all("<MouseWheel>", mouse_scroll)
         self.canvas_frame = self.canvas.create_window(0, 0, window=self.frame, anchor="nw")
+
+        main_menu = tk.Menu(self.root)
+        self.root.config(menu=main_menu)
+        settings_menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label="Settings", menu=settings_menu)
+        settings_menu.add_command(label='Restore Defaults', command=lambda: self.restore_defaults(prev))
 
         ttk.Label(self.frame, text='Decision Tree', font=myfont_b).place(x=30, y=10)
         ttk.Label(self.frame, text=' Include in\ncomparison', font=myfont2).place(x=20, y=40)
@@ -1160,3 +1195,130 @@ class cl_mtds_specification:
         ttk.Button(self.root, text='OK', command=lambda: quit_back(self.root, prev.root)).place(relx=0.85, rely=0.92)
 
         self.root.lift()
+
+    def restore_defaults(self, prev):
+        #methods parameters
+        prev.rc_include_comp = tk.BooleanVar(value=True)
+        prev.rc_alpha = tk.StringVar(value='1.0')
+        prev.rc_fit_intercept = tk.BooleanVar(value=True)
+        prev.rc_normalize = tk.BooleanVar(value=False)
+        prev.rc_copy_X = tk.BooleanVar(value=True)
+        prev.rc_max_iter = tk.StringVar(value='None')
+        prev.rc_tol = tk.StringVar(value='1e-3')
+        prev.rc_solver = tk.StringVar(value='auto')
+        prev.rc_random_state = tk.StringVar(value='None')
+        
+        prev.dtc_include_comp = tk.BooleanVar(value=True)
+        prev.dtc_criterion = tk.StringVar(value='gini')
+        prev.dtc_splitter = tk.StringVar(value='best')
+        prev.dtc_max_depth = tk.StringVar(value='None')
+        prev.dtc_min_samples_split = tk.StringVar(value='2')
+        prev.dtc_min_samples_leaf = tk.StringVar(value='1')
+        prev.dtc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+        prev.dtc_max_features = tk.StringVar(value='None')
+        prev.dtc_random_state = tk.StringVar(value='None')
+        prev.dtc_max_leaf_nodes = tk.StringVar(value='None')
+        prev.dtc_min_impurity_decrease = tk.StringVar(value='0.0')
+        prev.dtc_ccp_alpha = tk.StringVar(value='0.0')
+        
+        prev.rfc_include_comp = tk.BooleanVar(value=True)
+        prev.rfc_n_estimators = tk.StringVar(value='100')
+        prev.rfc_criterion = tk.StringVar(value='gini')
+        prev.rfc_max_depth = tk.StringVar(value='None')
+        prev.rfc_min_samples_split = tk.StringVar(value='2')
+        prev.rfc_min_samples_leaf = tk.StringVar(value='1')
+        prev.rfc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+        prev.rfc_max_features = tk.StringVar(value='auto')
+        prev.rfc_max_leaf_nodes = tk.StringVar(value='None')
+        prev.rfc_min_impurity_decrease = tk.StringVar(value='0.0')
+        prev.rfc_bootstrap = tk.BooleanVar(value=True)
+        prev.rfc_oob_score = tk.BooleanVar(value=False)
+        prev.rfc_n_jobs = tk.StringVar(value='None')
+        prev.rfc_random_state = tk.StringVar(value='None')
+        prev.rfc_verbose = tk.StringVar(value='0')
+        prev.rfc_warm_start = tk.BooleanVar(value=False)
+        prev.rfc_ccp_alpha = tk.StringVar(value='0.0')
+        prev.rfc_max_samples = tk.StringVar(value='None')
+        
+        prev.svc_include_comp = tk.BooleanVar(value=True)
+        prev.svc_C = tk.StringVar(value='1.0')
+        prev.svc_kernel = tk.StringVar(value='rbf')
+        prev.svc_degree = tk.StringVar(value='3')
+        prev.svc_gamma = tk.StringVar(value='scale')
+        prev.svc_coef0 = tk.StringVar(value='0.0')
+        prev.svc_shrinking = tk.BooleanVar(value=True)
+        prev.svc_probability = tk.BooleanVar(value=False)
+        prev.svc_tol = tk.StringVar(value='1e-3')
+        prev.svc_cache_size = tk.StringVar(value='200')
+        prev.svc_verbose = tk.BooleanVar(value=False)
+        prev.svc_max_iter = tk.StringVar(value='-1')
+        prev.svc_decision_function_shape = tk.StringVar(value='ovr')
+        prev.svc_break_ties = tk.BooleanVar(value=False)
+        prev.svc_random_state = tk.StringVar(value='None')
+        
+        prev.sgdc_include_comp = tk.BooleanVar(value=True)
+        prev.sgdc_loss = tk.StringVar(value='hinge')
+        prev.sgdc_penalty = tk.StringVar(value='l2')
+        prev.sgdc_alpha = tk.StringVar(value='0.0001')
+        prev.sgdc_l1_ratio = tk.StringVar(value='0.15')
+        prev.sgdc_fit_intercept = tk.BooleanVar(value=True)
+        prev.sgdc_max_iter = tk.StringVar(value='1000')
+        prev.sgdc_tol = tk.StringVar(value='1e-3')
+        prev.sgdc_shuffle = tk.BooleanVar(value=True)
+        prev.sgdc_verbose = tk.StringVar(value='0')
+        prev.sgdc_epsilon = tk.StringVar(value='0.1')
+        prev.sgdc_n_jobs = tk.StringVar(value='None')
+        prev.sgdc_random_state = tk.StringVar(value='None')
+        prev.sgdc_learning_rate = tk.StringVar(value='optimal')
+        prev.sgdc_eta0 = tk.StringVar(value='0.0')
+        prev.sgdc_power_t = tk.StringVar(value='0.5')
+        prev.sgdc_early_stopping = tk.BooleanVar(value=False)
+        prev.sgdc_validation_fraction = tk.StringVar(value='0.1')
+        prev.sgdc_n_iter_no_change = tk.StringVar(value='5')
+        prev.sgdc_warm_start = tk.BooleanVar(value=False)
+        prev.sgdc_average = tk.StringVar(value='False')
+        
+        prev.gpc_include_comp = tk.BooleanVar(value=True)
+        prev.gpc_n_restarts_optimizer = tk.StringVar(value='0')
+        prev.gpc_max_iter_predict = tk.StringVar(value='100')
+        prev.gpc_warm_start = tk.BooleanVar(value=False)
+        prev.gpc_copy_X_train = tk.BooleanVar(value=True)
+        prev.gpc_random_state = tk.StringVar(value='None')
+        prev.gpc_multi_class = tk.StringVar(value='one_vs_rest')
+        prev.gpc_n_jobs = tk.StringVar(value='None')
+        
+        prev.knc_include_comp = tk.BooleanVar(value=True)
+        prev.knc_n_neighbors = tk.StringVar(value='5')
+        prev.knc_weights = tk.StringVar(value='uniform')
+        prev.knc_algorithm = tk.StringVar(value='auto')
+        prev.knc_leaf_size = tk.StringVar(value='30')
+        prev.knc_p = tk.StringVar(value='2')
+        prev.knc_metric = tk.StringVar(value='minkowski')
+        prev.knc_n_jobs = tk.StringVar(value='None')
+        
+        prev.mlpc_include_comp = tk.BooleanVar(value=True)
+        prev.mlpc_hidden_layer_sizes = tk.StringVar(value='100')
+        prev.mlpc_activation = tk.StringVar(value='relu')
+        prev.mlpc_solver = tk.StringVar(value='adam')
+        prev.mlpc_alpha = tk.StringVar(value='0.0001')
+        prev.mlpc_batch_size = tk.StringVar(value='auto')
+        prev.mlpc_learning_rate = tk.StringVar(value='constant')
+        prev.mlpc_learning_rate_init = tk.StringVar(value='0.001')
+        prev.mlpc_power_t = tk.StringVar(value='0.5')
+        prev.mlpc_max_iter = tk.StringVar(value='200')
+        prev.mlpc_shuffle = tk.BooleanVar(value=True)
+        prev.mlpc_random_state = tk.StringVar(value='None')
+        prev.mlpc_tol = tk.StringVar(value='1e-4')
+        prev.mlpc_verbose = tk.BooleanVar(value=False)
+        prev.mlpc_warm_start = tk.BooleanVar(value=False)
+        prev.mlpc_momentum = tk.StringVar(value='0.9')
+        prev.mlpc_nesterovs_momentum = tk.BooleanVar(value=True)
+        prev.mlpc_early_stopping = tk.BooleanVar(value=False)
+        prev.mlpc_validation_fraction = tk.StringVar(value='0.1')
+        prev.mlpc_beta_1 = tk.StringVar(value='0.9')
+        prev.mlpc_beta_2 = tk.StringVar(value='0.999')
+        prev.mlpc_epsilon = tk.StringVar(value='1e-8')
+        prev.mlpc_n_iter_no_change = tk.StringVar(value='10')
+        prev.mlpc_max_fun = tk.StringVar(value='15000')
+
+        quit_back(self.root, prev.root)

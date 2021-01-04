@@ -11,18 +11,12 @@ import pandas as pd
 import sklearn
 from monkey_pt import Table
 
-# master = ThemedTk(theme=open('settings\style.txt', 'r').read(), fonts=True)
-
 myfont = (None, 13)
 myfont_b = (None, 13, 'bold')
 myfont1 = (None, 11)
 myfont1_b = (None, 11, 'bold')
 myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
-
-# style = ttk.Style()
-#style.theme_use('xpnative')
-# style.configure('.', font=myfont)
 
 big_themes = ['blue', 'clam', 'kroc', 'radiance', 'smog', 'ubuntu']
 
@@ -105,6 +99,7 @@ class Data_Preview:
 def quit_back(current, parent):
     current.destroy()
     parent.lift()
+    parent.deiconify()
 
 def open_file(app, entry): 
     entry.delete(0, tk.END)
@@ -132,22 +127,28 @@ def load_data(app, main, entry, data_type):
             app.tr_data_status.config(text='Loaded')
             app.combobox1.config(values=list(main.data.columns))
             app.combobox1.set(main.data.columns[-1])
-            app.tr_x_from_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.tr_x_from_combobox.set('1')
-            app.tr_x_to_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.tr_x_to_combobox.set(str(main.data.shape[1]-1))
+            app.tr_x_from_combobox.config(values=list(main.data.columns))
+            app.tr_x_from_combobox.set(main.data.columns[0])
+            app.tr_x_to_combobox.config(values=list(main.data.columns))
+            app.tr_x_to_combobox.set(main.data.columns[-2])
         elif data_type=='prediction':
             app.pr_data_status.config(text='Loaded')
-            app.pr_x_from_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.pr_x_from_combobox.set('1')
-            app.pr_x_to_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.pr_x_to_combobox.set(str(main.data.shape[1]))
+            app.pr_x_from_combobox.config(values=list(main.data.columns))
+            app.pr_x_from_combobox.set(main.data.columns[0])
+            app.pr_x_to_combobox.config(values=list(main.data.columns))
+            app.pr_x_to_combobox.set(main.data.columns[-1])
         elif data_type=='clust':
             app.cls_data_status.config(text='Loaded')
-            app.cls_x_from_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.cls_x_from_combobox.set('1')
-            app.cls_x_to_combobox.config(values=list(range(1, main.data.shape[1]+1)))
-            app.cls_x_to_combobox.set(str(main.data.shape[1]))
+            app.cls_x_from_combobox.config(values=list(main.data.columns))
+            app.cls_x_from_combobox.set(main.data.columns[0])
+            app.cls_x_to_combobox.config(values=list(main.data.columns))
+            app.cls_x_to_combobox.set(main.data.columns[-1])
+        elif data_type=='dcmp':
+            app.dcmp_data_status.config(text='Loaded')
+            app.dcmp_x_from_combobox.config(values=list(main.data.columns))
+            app.dcmp_x_from_combobox.set(main.data.columns[0])
+            app.dcmp_x_to_combobox.config(values=list(main.data.columns))
+            app.dcmp_x_to_combobox.set(main.data.columns[-1])
 
 def save_results(prev, main):
     files = [('Excel', '*.xlsx'),

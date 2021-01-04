@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter import messagebox
 import os
 import sys
 import numpy as np
@@ -31,9 +32,16 @@ class cls_app:
             from sklearn.cluster import KMeans
             from yellowbrick.cluster import KElbowVisualizer
             from sklearn import preprocessing
+
+            try:
+                x_from = main.data.columns.get_loc(main.x_from_var.get())
+                x_to = main.data.columns.get_loc(main.x_to_var.get()) + 1
+            except:
+                x_from = int(main.x_from_var.get())
+                x_to = int(main.x_to_var.get()) + 1
             
             scaler = preprocessing.StandardScaler()
-            X_St = scaler.fit_transform(main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())])
+            X_St = scaler.fit_transform(main.data.iloc[:,x_from : x_to])
 
             visualizer = KElbowVisualizer(KMeans(), metric=prev.elbow_metric.get(), 
                                           k=(int(prev.elbow_k_from.get()),int(prev.elbow_k_to.get())))
@@ -44,9 +52,16 @@ class cls_app:
             from scipy.cluster.hierarchy import dendrogram, linkage
             from matplotlib import pyplot as plt
             from sklearn import preprocessing
+
+            try:
+                x_from = main.data.columns.get_loc(main.x_from_var.get())
+                x_to = main.data.columns.get_loc(main.x_to_var.get()) + 1
+            except:
+                x_from = int(main.x_from_var.get())
+                x_to = int(main.x_to_var.get()) + 1
             
             scaler = preprocessing.StandardScaler()
-            X_St = scaler.fit_transform(main.data.iloc[:,(int(main.x_from_var.get())-1): int(main.x_to_var.get())])
+            X_St = scaler.fit_transform(main.data.iloc[:,x_from : x_to])
 
             # plt.rcParams["figure.figsize"] = (5,5)
 
@@ -81,6 +96,8 @@ class cls_app:
         self.root.tkraise()
         self.root.focus_force()
         self.root.resizable(False, False)
+
+        parent.iconify()
         
         self.frame = ttk.Frame(self.root, width=w, height=h)
         self.frame.place(x=0, y=0)
@@ -90,8 +107,6 @@ class cls_app:
         e1.place(x=120, y=10)
 
         ttk.Button(self.frame, text='Choose file', command=lambda: open_file(self, e1)).place(x=490, y=10)
-        
-        self.dummies_var = tk.IntVar(value=0)
 
         ttk.Label(self.frame, text='List number:').place(x=120,y=50)
         training_sheet_entry = ttk.Entry(self.frame, textvariable=self.clust.sheet, font=myfont1, width=3)
@@ -99,17 +114,15 @@ class cls_app:
 
         ttk.Button(self.frame, text='Load data ', command=lambda: load_data(self, self.clust, e1, 'clust')).place(x=490, y=50)
         
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=175)
         cb1 = ttk.Checkbutton(self.frame, text="header", variable=self.clust.header_var, takefocus=False)
         cb1.place(x=10, y=50)
 
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=100)
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
         self.cls_data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.cls_data_status.place(x=120, y=100)
+        self.cls_data_status.place(x=120, y=95)
 
         ttk.Button(self.frame, text='View/Change', 
-                   command=lambda: Data_Preview(self, self.clust, 'clust', parent)).place(x=230, y=100)
+                   command=lambda: Data_Preview(self, self.clust, 'clust', parent)).place(x=230, y=95)
 
         ttk.Label(self.frame, text='Number of clusters:', font=myfont1).place(x=30, y=140)
         self.n_clusters_var = tk.StringVar(value='2')
@@ -124,31 +137,51 @@ class cls_app:
         self.elbow_k_to = tk.StringVar(value='11')
         self.dendr_linkage = tk.StringVar(value='ward')
 
-        ttk.Button(self.frame, text='Elbow method', command=lambda: self.elbow_method(self, self.clust, parent)).place(x=400, y=140)
+        def try_elbow_method(prev, main, parent):
+            try:
+                self.elbow_method(prev, main, parent)
+            except ValueError as e:
+                messagebox.showerror(message='Error: "{}"'.format(e))
 
-        ttk.Button(self.frame, text='Dendrogram', command=lambda: self.show_dendrogram(self, self.clust, parent)).place(x=400, y=180)
+        ttk.Button(self.frame, text='Elbow method', width=12, command=lambda: try_elbow_method(self, self.clust, parent)).place(x=400, y=140)
 
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=205, y=140)
-        self.cls_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.clust.x_from_var, width=4, values=[])
-        self.cls_x_from_combobox.place(x=255, y=142)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=305, y=140)
-        self.cls_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.clust.x_to_var, width=4, values=[])
-        self.cls_x_to_combobox.place(x=325, y=142)
+        def try_show_dendrogram(prev, main, parent):
+            try:
+                self.show_dendrogram(prev, main, parent)
+            except ValueError as e:
+                messagebox.showerror(message='Error: "{}"'.format(e))
+
+        ttk.Button(self.frame, text='Dendrogram', width=12, command=lambda: try_show_dendrogram(self, self.clust, parent)).place(x=400, y=180)
+
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.cls_x_from_combobox = ttk.Combobox(self.frame, textvariable=self.clust.x_from_var, width=14, values=[])
+        self.cls_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.cls_x_to_combobox = ttk.Combobox(self.frame, textvariable=self.clust.x_to_var, width=14, values=[])
+        self.cls_x_to_combobox.place(x=275, y=157)
 
         self.x_st_var = tk.StringVar(value='If needed')
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=170)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=13,
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=180)
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
                                         values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=175)
+        self.combobox2.place(x=150,y=185)
+
+        self.dummies_var = tk.IntVar(value=0)
+        cb2 = ttk.Checkbutton(self.frame, text="Dummies", variable=self.dummies_var, takefocus=False)
+        cb2.place(x=270, y=185)
 
         ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=230)
         self.cls_method = tk.StringVar(value='K-Means')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.cls_method, values=['K-Means', 'Affinity Propagation', 
-                                                                                        'Mean Shift', 'Spectral clustering',
-                                                                                        'Hierarchical clustering', 'DBSCAN',
-                                                                                        'OPTICS', 'Birch'
-                                                                                        ])
-        self.combobox9.place(x=200,y=232)
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.cls_method, width=15, values=['K-Means', 'Affinity Propagation', 
+                                                                                                  'Mean Shift', 'Spectral clustering',
+                                                                                                  'Hierarchical clustering', 'DBSCAN',
+                                                                                                  'OPTICS', 'Birch'])
+        self.combobox9.place(x=150,y=232)
+
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=260)
+        self.place_result_var = tk.StringVar(value='End')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, width=10, values=['Start', 'End'])
+        self.combobox9.place(x=150,y=262)
 
         self.kmeans_init = tk.StringVar(value='k-means++')
         self.kmeans_n_init = tk.StringVar(value='10')
@@ -201,11 +234,35 @@ class cls_app:
         self.dbscan_p = tk.StringVar(value='None')
         self.dbscan_n_jobs = tk.StringVar(value='None')
 
+        self.opt_min_samples = tk.StringVar(value='5')
+        self.opt_max_eps = tk.StringVar(value='np.inf')
+        self.opt_metric = tk.StringVar(value='minkowski')
+        self.opt_p = tk.StringVar(value='2')
+        self.opt_cluster_method = tk.StringVar(value='xi')
+        self.opt_eps = tk.StringVar(value='None')
+        self.opt_xi = tk.StringVar(value='0.05')
+        self.opt_predecessor_correction = tk.BooleanVar(value=True)
+        self.opt_min_cluster_size = tk.StringVar(value='None')
+        self.opt_algorithm = tk.StringVar(value='auto')
+        self.opt_leaf_size = tk.StringVar(value='30')
+        self.opt_n_jobs = tk.StringVar(value='None')
+
+        self.bc_threshold = tk.StringVar(value='0.5')
+        self.bc_branching_factor = tk.StringVar(value='50')
+        self.bc_compute_labels = tk.BooleanVar(value=True)
+        self.bc_copy = tk.BooleanVar(value=True)
+
         def cls_predict_cluster(method):
+            try:
+                x_from = self.clust.data.columns.get_loc(self.clust.x_from_var.get())
+                x_to = self.clust.data.columns.get_loc(self.clust.x_to_var.get()) + 1
+            except:
+                x_from = int(self.clust.x_from_var.get())
+                x_to = int(self.clust.x_to_var.get()) + 1
             if self.dummies_var.get()==0:
-                X = self.clust.data.iloc[:,(int(self.clust.x_from_var.get())-1): int(self.clust.x_to_var.get())]
+                X = self.clust.data.iloc[:,x_from : x_to]
             elif self.dummies_var.get()==1:
-                X = pd.get_dummies(self.clust.data.iloc[:,(int(self.clust.x_from_var.get())-1): int(self.clust.x_to_var.get())])
+                X = pd.get_dummies(self.clust.data.iloc[:,x_from : x_to])
             from sklearn import preprocessing
             scaler = preprocessing.StandardScaler()
             X_St = scaler.fit_transform(X)
@@ -291,27 +348,55 @@ class cls_app:
                     pr_values = dbscan.fit_predict(X_St)
             elif method == 'OPTICS':
                 from sklearn.cluster import OPTICS
-                optics = OPTICS()
+                optics = OPTICS(min_samples=(float(self.opt_min_samples.get()) if '.' in self.opt_min_samples.get()
+                                             else int(self.opt_min_samples.get())),
+                                max_eps=(float(self.opt_max_eps.get()) if 
+                                         (self.opt_max_eps.get() != 'np.inf') else np.inf),
+                                metric=self.opt_metric.get(), p=int(self.opt_p.get()),
+                                cluster_method=self.opt_cluster_method.get(), 
+                                eps=(float(self.opt_eps.get()) if 
+                                     (self.opt_eps.get() != 'None') else None),
+                                xi=float(self.opt_xi.get()), predecessor_correction=self.opt_predecessor_correction.get(),
+                                min_cluster_size=(float(self.opt_min_cluster_size.get()) if '.' in self.opt_min_cluster_size.get() 
+                                                  else int(self.opt_min_cluster_size.get()) if 
+                                                  (self.opt_min_cluster_size.get() != 'None') else None),
+                                algorithm=self.opt_algorithm.get(), leaf_size=int(self.opt_leaf_size.get()),
+                                n_jobs=(int(self.opt_n_jobs.get()) if 
+                                        (self.opt_n_jobs.get() != 'None') else None))
                 if self.x_st_var.get() == 'No':
                     pr_values = optics.fit_predict(X)
                 else:
                     pr_values = optics.fit_predict(X_St)
             elif method == 'Birch':
                 from sklearn.cluster import Birch
-                bc = Birch(n_clusters=int(self.n_clusters_entry.get()))
+                bc = Birch(threshold=float(self.bc_threshold.get()), branching_factor=int(self.bc_branching_factor.get()),
+                           n_clusters=int(self.n_clusters_entry.get()),
+                           compute_labels=self.bc_compute_labels.get(), copy=self.bc_copy.get())
                 if self.x_st_var.get() == 'No':
                     pr_values = bc.fit_predict(X)
                 else:
                     pr_values = bc.fit_predict(X_St)
-
-            self.clust.data['Cluster'] = pr_values
+            
+            if self.place_result_var.get() == 'Start':
+                self.clust.data.insert(0, 'Cluster', pr_values)
+            elif self.place_result_var.get() == 'End':
+                self.clust.data['Cluster'] = pr_values
             
 
+        def try_cls_predict_cluster(method):
+            try:
+                cls_predict_cluster(method)
+            except ValueError as e:
+                messagebox.showerror(message='Error: "{}"'.format(e))
+
         ttk.Button(self.frame, text='Predict clusters', 
-                  command=lambda: cls_predict_cluster(method=self.cls_method.get())).place(x=400, y=230)
+                  command=lambda: try_cls_predict_cluster(method=self.cls_method.get())).place(x=400, y=230)
+
+        ttk.Button(self.frame, text='Save results', 
+                  command=lambda: save_results(self, self.clust)).place(x=400, y=270)
 
         ttk.Button(self.frame, text='Quit', 
-                  command=lambda: quit_back(self.root, parent)).place(x=420, y=290)
+                  command=lambda: quit_back(self.root, parent)).place(x=400, y=310)
 
 class cls_mtds_specification:
     def __init__(self, prev, parent):
@@ -329,28 +414,34 @@ class cls_mtds_specification:
         self.root.title('Clustering methods specification')
 
         self.canvas = tk.Canvas(self.root)
-        self.frame = ttk.Frame(self.canvas, width=1180, height=640)
-        self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", command=self.canvas.xview)
-        self.canvas.configure(xscrollcommand=self.scrollbar.set)
-        self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.frame = ttk.Frame(self.canvas, width=690, height=640)
+        # self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", command=self.canvas.xview)
+        # self.canvas.configure(xscrollcommand=self.scrollbar.set)
+        # self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(
-                scrollregion=self.canvas.bbox("all")
-            )
-        )
-        def mouse_scroll(event):
-            if event.delta:
-                self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
-            else:
-                if event.num == 5:
-                    move = 1
-                else:
-                    move = -1
-                self.canvas.xview_scroll(move, "units")
-        self.canvas.bind_all("<MouseWheel>", mouse_scroll)
+        # self.frame.bind(
+        #     "<Configure>",
+        #     lambda e: self.canvas.configure(
+        #         scrollregion=self.canvas.bbox("all")
+        #     )
+        # )
+        # def mouse_scroll(event):
+        #     if event.delta:
+        #         self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
+        #     else:
+        #         if event.num == 5:
+        #             move = 1
+        #         else:
+        #             move = -1
+        #         self.canvas.xview_scroll(move, "units")
+        # self.canvas.bind_all("<MouseWheel>", mouse_scroll)
         self.canvas_frame = self.canvas.create_window(0, 0, window=self.frame, anchor="nw")
+
+        main_menu = tk.Menu(self.root)
+        self.root.config(menu=main_menu)
+        settings_menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label="Settings", menu=settings_menu)
+        settings_menu.add_command(label='Restore Defaults', command=lambda: self.restore_defaults(prev))
 
         ttk.Label(self.frame, text='Elbow method', font=myfont_b).place(x=30, y=10)
         ttk.Label(self.frame, text='Metric', font=myfont2).place(x=5, y=40)
@@ -523,4 +614,130 @@ class cls_mtds_specification:
         dbscan_e5 = ttk.Entry(self.frame, textvariable=prev.dbscan_n_jobs, font=myfont2, width=5)
         dbscan_e5.place(x=495,y=160)
 
+        ttk.Label(self.frame, text='OPTICS', font=myfont_b).place(x=420, y=190)
+        ttk.Label(self.frame, text='Min samples', font=myfont2).place(x=390, y=220)
+        opt_e1 = ttk.Entry(self.frame, textvariable=prev.opt_min_samples, font=myfont2, width=5)
+        opt_e1.place(x=495,y=220)
+        ttk.Label(self.frame, text='Max eps', font=myfont2).place(x=390, y=240)
+        opt_e2 = ttk.Entry(self.frame, textvariable=prev.opt_max_eps, font=myfont2, width=5)
+        opt_e2.place(x=495,y=240)
+        ttk.Label(self.frame, text='Metric', font=myfont2).place(x=390, y=260)
+        opt_combobox1 = ttk.Combobox(self.frame, textvariable=prev.opt_metric, width=8, values=['euclidean', 'l1', 'l2',
+                                                                                                'manhattan', 'cosine', 'cityblock'])
+        opt_combobox1.place(x=490,y=260)
+        ttk.Label(self.frame, text='P', font=myfont2).place(x=390, y=280)
+        opt_e3 = ttk.Entry(self.frame, textvariable=prev.opt_p, font=myfont2, width=5)
+        opt_e3.place(x=495,y=280)
+        ttk.Label(self.frame, text='Cluster method', font=myfont2).place(x=390, y=300)
+        opt_combobox2 = ttk.Combobox(self.frame, textvariable=prev.opt_cluster_method, width=6, values=['xi', 'dbscan'])
+        opt_combobox2.place(x=495,y=300)
+        ttk.Label(self.frame, text='Eps', font=myfont2).place(x=390, y=320)
+        opt_e4 = ttk.Entry(self.frame, textvariable=prev.opt_eps, font=myfont2, width=5)
+        opt_e4.place(x=495,y=320)
+        ttk.Label(self.frame, text='Xi', font=myfont2).place(x=390, y=340)
+        opt_e5 = ttk.Entry(self.frame, textvariable=prev.opt_xi, font=myfont2, width=5)
+        opt_e5.place(x=495,y=340)
+        ttk.Label(self.frame, text='Predecessor\ncorrection', font=myfont2).place(x=390, y=360)
+        opt_cb1 = ttk.Checkbutton(self.frame, variable=prev.opt_predecessor_correction, takefocus=False)
+        opt_cb1.place(x=495, y=370)
+        ttk.Label(self.frame, text='Min cluster size', font=myfont2).place(x=390, y=400)
+        opt_e6 = ttk.Entry(self.frame, textvariable=prev.opt_min_cluster_size, font=myfont2, width=5)
+        opt_e6.place(x=495,y=400)
+        ttk.Label(self.frame, text='Algorithm', font=myfont2).place(x=390, y=420)
+        opt_combobox3 = ttk.Combobox(self.frame, textvariable=prev.opt_algorithm, width=7, values=['auto', 'ball_tree',
+                                                                                                   'kd_tree', 'brute'])
+        opt_combobox3.place(x=490,y=420)
+        ttk.Label(self.frame, text='Leaf size', font=myfont2).place(x=390, y=440)
+        opt_e7 = ttk.Entry(self.frame, textvariable=prev.opt_leaf_size, font=myfont2, width=5)
+        opt_e7.place(x=495,y=440)
+        ttk.Label(self.frame, text='n jobs', font=myfont2).place(x=390, y=460)
+        opt_e8 = ttk.Entry(self.frame, textvariable=prev.opt_n_jobs, font=myfont2, width=5)
+        opt_e8.place(x=495,y=460)
+
+        ttk.Label(self.frame, text='Birch', font=myfont_b).place(x=420, y=490)
+        ttk.Label(self.frame, text='Threshold', font=myfont2).place(x=390, y=520)
+        bc_e1 = ttk.Entry(self.frame, textvariable=prev.bc_threshold, font=myfont2, width=5)
+        bc_e1.place(x=495,y=520)
+        ttk.Label(self.frame, text='Branching factor', font=myfont2).place(x=390, y=540)
+        bc_e2 = ttk.Entry(self.frame, textvariable=prev.bc_branching_factor, font=myfont2, width=5)
+        bc_e2.place(x=495,y=540)
+        ttk.Label(self.frame, text='Compute labels', font=myfont2).place(x=390, y=560)
+        bc_cb1 = ttk.Checkbutton(self.frame, variable=prev.bc_compute_labels, takefocus=False)
+        bc_cb1.place(x=495, y=560)
+        ttk.Label(self.frame, text='Copy', font=myfont2).place(x=390, y=580)
+        bc_cb2 = ttk.Checkbutton(self.frame, variable=prev.bc_copy, takefocus=False)
+        bc_cb2.place(x=495, y=580)
+
         ttk.Button(self.root, text='OK', command=lambda: quit_back(self.root, prev.root)).place(relx=0.85, rely=0.92)
+
+    def restore_defaults(self, prev):
+        self.kmeans_init = tk.StringVar(value='k-means++')
+        self.kmeans_n_init = tk.StringVar(value='10')
+        self.kmeans_max_iter = tk.StringVar(value='300')
+        self.kmeans_tol = tk.StringVar(value='1e-4')
+        self.kmeans_verbose = tk.StringVar(value='0')
+        self.kmeans_random_state = tk.StringVar(value='None')
+        self.kmeans_copy_x = tk.BooleanVar(value=True)
+        self.kmeans_algorithm = tk.StringVar(value='auto')
+
+        self.ap_damping = tk.StringVar(value='0.5')
+        self.ap_max_iter = tk.StringVar(value='200')
+        self.ap_convergence_iter = tk.StringVar(value='15')
+        self.ap_copy = tk.BooleanVar(value=True)
+        self.ap_verbose = tk.BooleanVar(value=False)
+        self.ap_random_state = tk.StringVar(value='0')
+
+        self.ms_bandwidth = tk.StringVar(value='None')
+        self.ms_bin_seeding = tk.BooleanVar(value=False)
+        self.ms_min_bin_freq = tk.StringVar(value='1')
+        self.ms_cluster_all = tk.BooleanVar(value=True)
+        self.ms_n_jobs = tk.StringVar(value='None')
+        self.ms_max_iter = tk.StringVar(value='300')
+
+        self.sc_eigen_solver = tk.StringVar(value='arpack')
+        self.sc_n_components = tk.StringVar(value='None')
+        self.sc_random_state = tk.StringVar(value='None')
+        self.sc_n_init = tk.StringVar(value='10')
+        self.sc_gamma = tk.StringVar(value='1.0')
+        self.sc_affinity = tk.StringVar(value='rbf')
+        self.sc_n_neighbors = tk.StringVar(value='None')
+        self.sc_eigen_tol = tk.StringVar(value='0.0')
+        self.sc_assign_labels = tk.StringVar(value='kmeans')
+        self.sc_degree = tk.StringVar(value='3')
+        self.sc_coef0 = tk.StringVar(value='1')
+        self.sc_n_jobs = tk.StringVar(value='None')
+        self.sc_verbose = tk.BooleanVar(value=False)
+
+        self.ac_affinity = tk.StringVar(value='euclidean')
+        self.ac_compute_full_tree = tk.StringVar(value='auto')
+        self.ac_linkage = tk.StringVar(value='ward')
+        self.ac_distance_threshold = tk.StringVar(value='None')
+        self.ac_compute_distances = tk.BooleanVar(value=False)
+
+        self.dbscan_eps = tk.StringVar(value='0.5')
+        self.dbscan_min_samples = tk.StringVar(value='5')
+        self.dbscan_metric = tk.StringVar(value='euclidean')
+        self.dbscan_algorithm = tk.StringVar(value='auto')
+        self.dbscan_leaf_size = tk.StringVar(value='30')
+        self.dbscan_p = tk.StringVar(value='None')
+        self.dbscan_n_jobs = tk.StringVar(value='None')
+
+        self.opt_min_samples = tk.StringVar(value='5')
+        self.opt_max_eps = tk.StringVar(value='np.inf')
+        self.opt_metric = tk.StringVar(value='minkowski')
+        self.opt_p = tk.StringVar(value='2')
+        self.opt_cluster_method = tk.StringVar(value='xi')
+        self.opt_eps = tk.StringVar(value='None')
+        self.opt_xi = tk.StringVar(value='0.05')
+        self.opt_predecessor_correction = tk.BooleanVar(value=True)
+        self.opt_min_cluster_size = tk.StringVar(value='None')
+        self.opt_algorithm = tk.StringVar(value='auto')
+        self.opt_leaf_size = tk.StringVar(value='30')
+        self.opt_n_jobs = tk.StringVar(value='None')
+
+        self.bc_threshold = tk.StringVar(value='0.5')
+        self.bc_branching_factor = tk.StringVar(value='50')
+        self.bc_compute_labels = tk.BooleanVar(value=True)
+        self.bc_copy = tk.BooleanVar(value=True)
+
+        quit_back(self.root, prev.root)

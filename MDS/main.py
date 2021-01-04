@@ -14,6 +14,7 @@ from .utils import Data_Preview, quit_back, open_file, load_data, save_results
 from .classification import *
 from .regression import *
 from .clustering import *
+from .decomposition import *
 
 # getting the right path to images for frozen version
 if getattr(sys, 'frozen', False):
@@ -31,7 +32,6 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 style = ttk.Style()
-#style.theme_use('xpnative')
 style.configure('.', font=myfont)
 
 big_themes = ['blue', 'clam', 'kroc', 'radiance', 'smog', 'ubuntu']
@@ -57,9 +57,12 @@ class start_window:
         panel.place(relx=0.04, rely=0.15)
         
 #         ttk.Label(sw_frame, text="Choose ML problem").place(relx=0.55, rely=0.15)
-        ttk.Button(sw_frame, text='Classification', command=lambda: cl_app(master)).place(relx=0.6, rely=0.25)
-        ttk.Button(sw_frame, text='  Regression ', command=lambda: rgr_app(master)).place(relx=0.6, rely=0.4)
-        ttk.Button(sw_frame, text='   Clustering  ', command=lambda: cls_app(master)).place(relx=0.6, rely=0.55)
+        ttk.Button(sw_frame, text='Classification', width=12, command=lambda: cl_app(master)).place(x=300, y=80)
+        ttk.Button(sw_frame, text='Regression', width=12, command=lambda: rgr_app(master)).place(x=300, y=130)
+        ttk.Button(sw_frame, text='Clustering', width=12, command=lambda: cls_app(master)).place(x=300, y=180)
+        ttk.Button(sw_frame, text='Decomposition', width=12, command=lambda: dcmp_app(master)).place(x=300, y=230)
+
+        # ttk.Button(sw_frame, text='    Quit', command=lambda: master.destroy()).place(x=310, y=300)
         #setting main window's parameters       
         x = (master.ws/2) - (w/2)
         y = (master.hs/2) - (h/2)  - 30
@@ -115,7 +118,7 @@ class start_window:
         def open_sklearn():
             webbrowser.open('https://scikit-learn.org')
         def open_about_window():
-            about_message = 'Machine Learning tool 0.7'
+            about_message = 'Machine Learning tool 1.0'
             about_detail = "by Monkey22\na.k.a Osipov A."
             tk.messagebox.showinfo(title='About', message=about_message, detail=about_detail)
         help_menu.add_command(label='Scikit-learn site', command=open_sklearn)
