@@ -10,8 +10,6 @@ import numpy as np
 import webbrowser
 import pandas as pd
 import sklearn
-from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results
 from classification import *
 from regression import *
 from clustering import *
@@ -40,10 +38,6 @@ big_themes = ['blue', 'clam', 'kroc', 'radiance', 'smog', 'ubuntu']
 #start window class
 class start_window:
     def __init__(self):
-        global running
-        # multiprocessing.freeze_support()
-        running = True
-        print(sys.argv)
         # Setting geometrical things
         w = 500
         h = 400

@@ -1,8 +1,6 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk
-from ttkthemes import ThemedTk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import messagebox, scrolledtext
 from threading import Thread
 import os

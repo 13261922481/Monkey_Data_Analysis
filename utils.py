@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tkinter import scrolledtext 
 import os
 import sys
 import numpy as np

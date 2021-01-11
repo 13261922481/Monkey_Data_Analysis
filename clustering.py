@@ -1,8 +1,6 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk
-from ttkthemes import ThemedTk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import messagebox
 import os
 import sys
@@ -449,27 +447,7 @@ class cls_mtds_specification:
 
         self.canvas = tk.Canvas(self.root)
         self.frame = ttk.Frame(self.canvas, width=690, height=640)
-        # self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", 
-        # command=self.canvas.xview)
-        # self.canvas.configure(xscrollcommand=self.scrollbar.set)
-        # self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        # self.frame.bind(
-        #     "<Configure>",
-        #     lambda e: self.canvas.configure(
-        #         scrollregion=self.canvas.bbox("all")
-        #     )
-        # )
-        # def mouse_scroll(event):
-        #     if event.delta:
-        #         self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
-        #     else:
-        #         if event.num == 5:
-        #             move = 1
-        #         else:
-        #             move = -1
-        #         self.canvas.xview_scroll(move, "units")
-        # self.canvas.bind_all("<MouseWheel>", mouse_scroll)
         self.canvas_frame = self.canvas.create_window(0, 0, window=self.frame, anchor="nw")
 
         main_menu = tk.Menu(self.root)

@@ -1,19 +1,14 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk
-from ttkthemes import ThemedTk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import messagebox, scrolledtext
-import threading
-from multiprocessing import freeze_support
-from threading import Thread, Event
+from threading import Thread
 import os
 import sys
 import numpy as np
 import webbrowser
 import pandas as pd
 import sklearn
-from joblib import parallel_backend
 from monkey_pt import Table
 from utils import Data_Preview, quit_back, open_file, load_data, save_results
 
@@ -191,7 +186,6 @@ class cl_app:
                     from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold
                     folds = RepeatedStratifiedKFold(n_splits = int(e2.get()), 
                         n_repeats=int(rep_entry.get()), random_state = None)
-                    # with parallel_backend("multiprocessing"):
                     if method == 'Decision Tree':
                         from sklearn.tree import DecisionTreeClassifier
                         gc = GridSearchCV(estimator=DecisionTreeClassifier(), 

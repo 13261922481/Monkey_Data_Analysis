@@ -1,8 +1,6 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk
-from ttkthemes import ThemedTk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import messagebox
 import os
 import sys
@@ -332,27 +330,7 @@ class dcmp_mtds_specification:
 
         self.canvas = tk.Canvas(self.root)
         self.frame = ttk.Frame(self.canvas, width=690, height=640)
-        # self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", 
-        # command=self.canvas.xview)
-        # self.canvas.configure(xscrollcommand=self.scrollbar.set)
-        # self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        # self.frame.bind(
-        #     "<Configure>",
-        #     lambda e: self.canvas.configure(
-        #         scrollregion=self.canvas.bbox("all")
-        #     )
-        # )
-        # def mouse_scroll(event):
-        #     if event.delta:
-        #         self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
-        #     else:
-        #         if event.num == 5:
-        #             move = 1
-        #         else:
-        #             move = -1
-        #         self.canvas.xview_scroll(move, "units")
-        # self.canvas.bind_all("<MouseWheel>", mouse_scroll)
         self.canvas_frame = self.canvas.create_window(0, 0, window=self.frame, anchor="nw")
 
         main_menu = tk.Menu(self.root)
@@ -490,3 +468,47 @@ class dcmp_mtds_specification:
 
         ttk.Button(self.root, text='OK', 
             command=lambda: quit_back(self.root, dcmp_app.root)).place(relx=0.8, rely=0.92)
+
+    def restore_defaults(self, prev):
+
+        prev.pca_copy = tk.BooleanVar(value=True)
+        prev.pca_whiten = tk.BooleanVar(value=False)
+        prev.pca_svd_solver = tk.StringVar(value='auto')
+        prev.pca_tol = tk.StringVar(value='0.0')
+        prev.pca_iterated_power = tk.StringVar(value='auto')
+        prev.pca_random_state = tk.StringVar(value='None')
+
+        prev.fa_tol = tk.StringVar(value='1e-2')
+        prev.fa_copy = tk.BooleanVar(value=True)
+        prev.fa_max_iter = tk.StringVar(value='1000')
+        prev.fa_svd_method = tk.StringVar(value='randomized')
+        prev.fa_iterated_power = tk.StringVar(value='3')
+        prev.fa_rotation = tk.StringVar(value='None')
+        prev.fa_random_state = tk.StringVar(value='0')
+
+        prev.ipca_whiten = tk.BooleanVar(value=False)
+        prev.ipca_copy = tk.BooleanVar(value=True)
+        prev.ipca_batch_size = tk.StringVar(value='None')
+
+        prev.kpca_kernel = tk.StringVar(value='linear')
+        prev.kpca_gamma = tk.StringVar(value='None')
+        prev.kpca_degree = tk.StringVar(value='3')
+        prev.kpca_coef0 = tk.StringVar(value='1.0')
+        prev.kpca_alpha = tk.StringVar(value='1.0')
+        prev.kpca_fit_inverse_transform = tk.BooleanVar(value=False)
+        prev.kpca_eigen_solver = tk.StringVar(value='auto')
+        prev.kpca_tol = tk.StringVar(value='0.0')
+        prev.kpca_max_iter = tk.StringVar(value='None')
+        prev.kpca_remove_zero_eig = tk.BooleanVar(value=False)
+        prev.kpca_random_state = tk.StringVar(value='None')
+        prev.kpca_copy_X = tk.BooleanVar(value=True)
+        prev.kpca_n_jobs = tk.StringVar(value='None')
+
+        prev.fica_algorithm = tk.StringVar(value='parallel')
+        prev.fica_whiten = tk.BooleanVar(value=True)
+        prev.fica_fun = tk.StringVar(value='logcosh')
+        prev.fica_max_iter = tk.StringVar(value='200')
+        prev.fica_tol = tk.StringVar(value='1e-4')
+        prev.fica_random_state = tk.StringVar(value='None')
+
+        quit_back(self.root, prev.root)
