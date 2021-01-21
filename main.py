@@ -14,6 +14,7 @@ from classification import *
 from regression import *
 from clustering import *
 from decomposition import *
+from utils import restart_app
 
 # getting the right path to images for frozen version
 if getattr(sys, 'frozen', False):
@@ -21,19 +22,20 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = os.path.abspath('')
 
+#themed tkinter master
 master = ThemedTk(theme=open('settings\style.txt', 'r').read(), fonts=True)
 
-myfont = (None, 13)
-myfont_b = (None, 13, 'bold')
+#fonts to be used
+myfont = (None, 12)
+myfont_b = (None, 12, 'bold')
 myfont1 = (None, 11)
 myfont1_b = (None, 11, 'bold')
 myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
+#configuring main font to be used
 style = ttk.Style()
 style.configure('.', font=myfont)
-
-big_themes = ['blue', 'clam', 'kroc', 'radiance', 'smog', 'ubuntu']
 
 #start window class
 class start_window:
@@ -49,12 +51,13 @@ class start_window:
         start_window.frame.place(x=0, y=0)
         
         # placing funny monkey
-        img_name1 = 'imgs\ML\monkey1.png'
+        img_name1 = 'imgs/ML/monkey1.png'
         img_path1 = os.path.join(application_path, img_name1)
         img1 = tk.PhotoImage(file=img_path1)
         panel = tk.Label(start_window.frame, image = img1)
         panel.place(relx=0.04, rely=0.15)
 
+        # instead of closing apps, which leads to losing data, we just iconify/deiconify it
         def run_app(app):
             if not hasattr(app, 'root'):
                 app(master)
@@ -62,7 +65,7 @@ class start_window:
                 app.root.deiconify()
         
         ttk.Button(start_window.frame, text='Classification', width=12, 
-            command=lambda: run_app(cl_app)).place(x=300, y=80)
+            command=lambda: run_app(clf_app)).place(x=300, y=80)
         ttk.Button(start_window.frame, text='Regression', width=12, 
             command=lambda: run_app(rgr_app)).place(x=300, y=130)
         ttk.Button(start_window.frame, text='Clustering', width=12, 
@@ -88,6 +91,7 @@ class start_window:
         #Creating menus
         main_menu = tk.Menu(master)
         master.config(menu=main_menu)
+        main_menu.add_command(label='Restart', command=lambda: restart_app())
         settings_menu = tk.Menu(main_menu, tearoff=False)
         def set_theme(theme):
             master.set_theme(theme)
@@ -135,6 +139,7 @@ class start_window:
         
         master.mainloop()
 
+#run the program with multiprocessing support
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     start_window()

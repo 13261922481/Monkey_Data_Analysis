@@ -11,6 +11,7 @@ import sklearn
 from monkey_pt import Table
 from utils import Data_Preview, quit_back, open_file, load_data, save_results
 
+# fonts
 myfont = (None, 13)
 myfont_b = (None, 13, 'bold')
 myfont1 = (None, 11)
@@ -18,11 +19,15 @@ myfont1_b = (None, 11, 'bold')
 myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
+# app for data decompostion (dimensionality reduction)
 class dcmp_app:
+    # sub-class for decomposition-related data
     class decomposition:
         def __init__(self):
             pass
+    # run decomposition app itself
     def __init__(self, parent):
+        # initialize data
         if not hasattr(self.decomposition, 'data'):
             self.decomposition.data = None
             self.decomposition.sheet = tk.StringVar()
@@ -35,10 +40,9 @@ class dcmp_app:
             self.decomposition.view_frame = None
             self.decomposition.pt = None
         
+        #setting main window's parameters      
         w = 600
-        h = 350
-        
-        #setting main window's parameters       
+        h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
         dcmp_app.root = tk.Toplevel(parent)
@@ -117,6 +121,13 @@ class dcmp_app:
             values=['PCA', 'Factor Analysis', 'Incremental PCA', 'Kernel PCA', 'Fast ICA'])
         self.combobox9.place(x=150,y=232)
 
+        ttk.Label(self.frame, text='Result place', font=myfont1).place(x=30, y=260)
+        self.place_method = tk.StringVar(value='Join: end')
+        self.combobox10 = ttk.Combobox(self.frame, textvariable=self.place_method, width=10, 
+            values=['Join: start', 'Join: end', 'Replace'])
+        self.combobox10.place(x=150,y=262)
+
+        # methods parameters
         self.pca_copy = tk.BooleanVar(value=True)
         self.pca_whiten = tk.BooleanVar(value=False)
         self.pca_svd_solver = tk.StringVar(value='auto')
@@ -157,6 +168,7 @@ class dcmp_app:
         self.fica_tol = tk.StringVar(value='1e-4')
         self.fica_random_state = tk.StringVar(value='None')
 
+        # do decomposition
         def decompose(method):
             try:
                 x_from = self.decomposition.data.columns.get_loc(self.decomposition.x_from_var.get())
@@ -286,8 +298,20 @@ class dcmp_app:
                     column_names = ['IC{}'.format(i) for i in range(1, 
                         int(self.n_features_var.get())+1)]
 
-            self.decomposition.data = self.decomposition.data.join(pd.DataFrame(pr_values, 
-                columns=column_names), lsuffix='_left', rsuffix='_right')
+            if self.place_method.get()=='Join: start':
+                self.decomposition.data = pd.DataFrame(pr_values, 
+                    columns=column_names).join(self.decomposition.data, 
+                        lsuffix='_left', rsuffix='_right')
+            elif self.place_method.get()=='Join: end':
+                self.decomposition.data = self.decomposition.data.join(pd.DataFrame(pr_values, 
+                    columns=column_names), lsuffix='_left', rsuffix='_right')
+            elif self.place_method.get()=='Replace':
+                self.decomposition.data.drop(self.decomposition.data.columns[x_from:x_to], 
+                    axis=1, inplace=True)
+                self.decomposition.data = self.decomposition.data.join(pd.DataFrame(pr_values, 
+                    columns=column_names), lsuffix='_left', rsuffix='_right')
+            # self.decomposition.data = self.decomposition.data.join(pd.DataFrame(pr_values, 
+            #     columns=column_names), lsuffix='_left', rsuffix='_right')
 
             if self.decomposition.Viewed.get() == True:
                 self.decomposition.pt = Table(self.decomposition.view_frame, 
@@ -298,6 +322,7 @@ class dcmp_app:
                 Data_Preview.notebook.nb.select(self.decomposition.view_frame)
                 Data_Preview.root.lift()
 
+        # run decomposition
         def try_decompose(method):
             try:
                 decompose(method)
@@ -314,13 +339,14 @@ class dcmp_app:
         ttk.Button(self.frame, text='Quit', 
                   command=lambda: quit_back(dcmp_app.root, parent)).place(x=400, y=310)
 
+# methods' specifications
 class dcmp_mtds_specification:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
+        #setting main window's parameters      
         w = 450
-        h = 520
-        #setting main window's parameters       
+        h = 520 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
         self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
@@ -469,6 +495,7 @@ class dcmp_mtds_specification:
         ttk.Button(self.root, text='OK', 
             command=lambda: quit_back(self.root, dcmp_app.root)).place(relx=0.8, rely=0.92)
 
+    # restore default values
     def restore_defaults(self, prev):
 
         prev.pca_copy = tk.BooleanVar(value=True)

@@ -128,9 +128,9 @@ class TableModel(object):
         if ftype == '.pickle':
             self.df.to_pickle(filename)
         elif ftype == '.xls' or ftype == '.xlsx':
-            self.df.to_excel(filename)
+            self.df.to_excel(filename, index=False)
         elif ftype == '.csv':
-            self.df.to_csv(filename)
+            self.df.to_csv(filename, index=False)
         #elif ftype == '.html':
         #    self.df.to_html(filename)
         return

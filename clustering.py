@@ -11,6 +11,7 @@ import sklearn
 from monkey_pt import Table
 from utils import Data_Preview, quit_back, open_file, load_data, save_results
 
+#fonts
 myfont = (None, 13)
 myfont_b = (None, 13, 'bold')
 myfont1 = (None, 11)
@@ -18,10 +19,13 @@ myfont1_b = (None, 11, 'bold')
 myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
+# App to do clustering
 class cls_app:
+    # sub-class for clustering-related data
     class clust:
         def __init__(self):
             pass
+    # elbow method
     class elbow_method:
         def __init__(self, prev, main, parent):
             from sklearn.cluster import KMeans
@@ -42,6 +46,7 @@ class cls_app:
                 k=(int(prev.elbow_k_from.get()),int(prev.elbow_k_to.get())))
             visualizer.fit(X_St)
             visualizer.show()
+    # dendrogram
     class show_dendrogram:
         def __init__(self, prev, main, parent):
             from scipy.cluster.hierarchy import dendrogram, linkage
@@ -63,7 +68,9 @@ class cls_app:
             plt.title('Hierarchical Clustering Dendrogram')
             dendrogram(linkage(X_St, method=prev.dendr_linkage.get()))
             plt.show()
+    # Running clustering app itself
     def __init__(self, parent):
+        # initialize data
         if not hasattr(self.clust, 'data'):
             self.clust.data = None
             self.clust.sheet = tk.StringVar()
@@ -76,10 +83,9 @@ class cls_app:
             self.clust.view_frame = None
             self.clust.pt = None
 
+        #setting main window's parameters
         w = 600
-        h = 350
-        
-        #setting main window's parameters       
+        h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
         cls_app.root = tk.Toplevel(parent)
@@ -136,6 +142,7 @@ class cls_app:
         self.elbow_k_to = tk.StringVar(value='11')
         self.dendr_linkage = tk.StringVar(value='ward')
 
+        # run elbow method
         def try_elbow_method(prev, main, parent):
             try:
                 self.elbow_method(prev, main, parent)
@@ -145,6 +152,7 @@ class cls_app:
         ttk.Button(self.frame, text='Elbow method', width=12, 
             command=lambda: try_elbow_method(self, self.clust, parent)).place(x=400, y=140)
 
+        # show dendrogram
         def try_show_dendrogram(prev, main, parent):
             try:
                 self.show_dendrogram(prev, main, parent)
@@ -187,6 +195,7 @@ class cls_app:
             values=['Start', 'End'])
         self.combobox9.place(x=150,y=262)
 
+        # methods parameters
         self.kmeans_init = tk.StringVar(value='k-means++')
         self.kmeans_n_init = tk.StringVar(value='10')
         self.kmeans_max_iter = tk.StringVar(value='300')
@@ -256,6 +265,7 @@ class cls_app:
         self.bc_compute_labels = tk.BooleanVar(value=True)
         self.bc_copy = tk.BooleanVar(value=True)
 
+        # function to do clustering
         def cls_predict_cluster(method):
             try:
                 x_from = self.clust.data.columns.get_loc(self.clust.x_from_var.get())
@@ -414,7 +424,7 @@ class cls_app:
                 Data_Preview.notebook.nb.select(self.clust.view_frame)
                 Data_Preview.root.lift()
             
-
+        # run clustering
         def try_cls_predict_cluster(method):
             try:
                 cls_predict_cluster(method)
@@ -431,13 +441,14 @@ class cls_app:
         ttk.Button(self.frame, text='Quit', 
                   command=lambda: quit_back(cls_app.root, parent)).place(x=400, y=310)
 
+# sub-app for methods' specifications
 class cls_mtds_specification:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
+        #setting main window's parameters      
         w = 690
-        h = 640
-        #setting main window's parameters       
+        h = 640 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
         self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
@@ -693,6 +704,7 @@ class cls_mtds_specification:
         ttk.Button(self.root, text='OK', 
             command=lambda: quit_back(self.root, cls_app.root)).place(relx=0.85, rely=0.92)
 
+    # function to restore default parameters
     def restore_defaults(self, prev):
         prev.kmeans_init = tk.StringVar(value='k-means++')
         prev.kmeans_n_init = tk.StringVar(value='10')
