@@ -69,7 +69,7 @@ class start_window:
         ttk.Button(start_window.frame, text='Regression', width=12, 
             command=lambda: run_app(rgr_app)).place(x=300, y=130)
         ttk.Button(start_window.frame, text='Clustering', width=12, 
-            command=lambda: run_app(cls_app)).place(x=300, y=180)
+            command=lambda: run_app(clust_app)).place(x=300, y=180)
         ttk.Button(start_window.frame, text='Decomposition', width=12, 
             command=lambda: run_app(dcmp_app)).place(x=300, y=230)
 
@@ -119,20 +119,31 @@ class start_window:
         scid_menu.add_command(label='Pink', command=lambda: set_theme('scidpink'))
         style_menu.add_cascade(label="Scid", menu=scid_menu)
         style_menu.add_command(label='Smog', command=lambda: set_theme('smog'))
-        style_menu.add_command(label='Ubuntu', command=lambda: set_theme('ubuntu')) #big
+        # style_menu.add_command(label='Ubuntu', command=lambda: set_theme('ubuntu')) #big
         style_menu.add_command(label='Vista', command=lambda: set_theme('vista'))
         style_menu.add_command(label='winnative', command=lambda: set_theme('winnative'))
         style_menu.add_command(label='winxpblue', command=lambda: set_theme('winxpblue'))
         style_menu.add_command(label='xpnative', command=lambda: set_theme('xpnative'))
         settings_menu.add_cascade(label="Style", menu=style_menu)
         help_menu = tk.Menu(main_menu, tearoff=False)
-        def open_sklearn():
-            webbrowser.open('https://scikit-learn.org')
+        def open_site(site):
+            webbrowser.open(site)
         def open_about_window():
-            about_message = 'Machine Learning tool 1.0'
+            about_message = 'Machine Learning tool 1.2'
             about_detail = "by Monkey22\na.k.a Osipov A."
             tk.messagebox.showinfo(title='About', message=about_message, detail=about_detail)
-        help_menu.add_command(label='Scikit-learn site', command=open_sklearn)
+        docs_menu = tk.Menu(help_menu, tearoff=False)
+        help_menu.add_cascade(label="Docs", menu=docs_menu)
+        docs_menu.add_command(label='Pandas', 
+            command=lambda: open_site('https://pandas.pydata.org'))
+        docs_menu.add_command(label='Numpy', 
+            command=lambda: open_site('https://numpy.org'))
+        docs_menu.add_command(label='Scikit-learn', 
+            command=lambda: open_site('https://scikit-learn.org'))
+        docs_menu.add_command(label='XGBoost', 
+            command=lambda: open_site('https://xgboost.readthedocs.io/en/latest/'))
+        docs_menu.add_command(label='CatBoost', 
+            command=lambda: open_site('https://catboost.ai/docs/concepts/about.html'))
         help_menu.add_command(label='About', command=open_about_window)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         main_menu.add_cascade(label="Help", menu=help_menu)

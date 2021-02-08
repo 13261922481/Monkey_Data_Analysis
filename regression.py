@@ -1,7 +1,6 @@
 # Imports
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext
 from threading import Thread
 import os
 import sys
@@ -188,20 +187,52 @@ class rgr_app:
                     except:
                         x_from = int(main.x_from_var.get())
                         x_to = int(main.x_to_var.get()) + 1
-                    if prev.dummies_var.get()==0:
+                    if self.handle_cat_var.get()=='No':
                         try:
                             prev.X = main.data.iloc[:,x_from : x_to]
-                            prev.y = main.data[prev.y_var.get()]
+                            prev.y = main.data[self.y_var.get()]
                         except:
                             prev.X = main.data.iloc[:,x_from : x_to]
-                            prev.y = main.data[int(prev.y_var.get())]
-                    elif prev.dummies_var.get()==1:
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='Dummies':
+                        from sklearn.preprocessing import OneHotEncoder
+                        enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                         try:
-                            prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
-                            prev.y = main.data[prev.y_var.get()]
+                            prev.X = main.data.iloc[:,x_from : x_to]
+                            onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                            onehot_df = prev.X[onehot_columns]
+                            onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                            df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                            prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
+                            prev.y = main.data[self.y_var.get()]
                         except:
-                            prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
-                            prev.y = main.data[int(prev.y_var.get())]
+                            prev.X = main.data.iloc[:,x_from : x_to]
+                            onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                            onehot_df = prev.X[onehot_columns]
+                            onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                            df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                            prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='One Hot Encoding':
+                        from sklearn.preprocessing import OneHotEncoder
+                        enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                        try:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[self.y_var.get()]
+                        except:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='Ordinal Encoding':
+                        from sklearn.preprocessing import OrdinalEncoder
+                        enc = OrdinalEncoder(handle_unknown='ignore')
+                        try:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[self.y_var.get()]
+                        except:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[int(self.y_var.get())]
                     from sklearn import preprocessing
                     scaler = preprocessing.StandardScaler()
                     prev.X_St = scaler.fit_transform(prev.X)
@@ -413,7 +444,7 @@ class rgr_app:
             self.prediction.pt = None
         
         #setting main window's parameters   
-        w = 600
+        w = 620
         h = 500    
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
@@ -427,39 +458,6 @@ class rgr_app:
         rgr_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(rgr_app.root, parent))
 
         parent.iconify()
-        
-        self.frame = ttk.Frame(rgr_app.root, width=w, height=h)
-        self.frame.place(x=0, y=0)
-        
-        ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
-        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
-        e1.place(x=120, y=10)
-        
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, e1)).place(x=490, y=10)
-        
-        self.dummies_var = tk.IntVar(value=0)
-        
-        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
-        training_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.training.sheet, font=myfont1, width=3)
-        training_sheet_entry.place(x=215,y=52)
-                
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.training, e1, 
-                'rgr training')).place(x=490, y=50)
-        
-        cb1 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.training.header_var, takefocus=False)
-        cb1.place(x=10, y=50)
-        
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
-        self.training.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.training.data_status.place(x=120, y=95)
-
-        ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.training, 
-                'rgr training', parent)).place(x=230, y=95)
 
         #methods parameters
         self.inc_scoring = tk.StringVar(value='r2')
@@ -636,6 +634,13 @@ class rgr_app:
         self.cbr_cv_voting_mode = tk.BooleanVar(value=False)
         self.cbr_cv_voting_folds = tk.StringVar(value='5')
 
+        self.lgbmr_eval_metric = tk.StringVar(value='rmse')
+        self.lgbmr_early_stopping = tk.BooleanVar(value=False)
+        self.lgbmr_n_iter_no_change = tk.StringVar(value='100')
+        self.lgbmr_validation_fraction = tk.StringVar(value='0.2')
+        self.lgbmr_cv_voting_mode = tk.BooleanVar(value=True)
+        self.lgbmr_cv_voting_folds = tk.StringVar(value='5')
+
         # flag for stopping comparison
         self.continue_flag = True
 
@@ -648,19 +653,51 @@ class rgr_app:
                 except:
                     x_from = int(main.x_from_var.get())
                     x_to = int(main.x_to_var.get()) + 1
-                if self.dummies_var.get()==0:
+                if self.handle_cat_var.get()=='No':
                     try:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[self.y_var.get()]
                     except:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[int(self.y_var.get())]
-                elif self.dummies_var.get()==1:
+                elif self.handle_cat_var.get()=='Dummies':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                     try:
-                        prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
+                        prev.X = main.data.iloc[:,x_from : x_to]
+                        onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                        onehot_df = prev.X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                        prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
                         prev.y = main.data[self.y_var.get()]
                     except:
-                        prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
+                        prev.X = main.data.iloc[:,x_from : x_to]
+                        onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                        onehot_df = prev.X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                        prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                        
+                        prev.y = main.data[int(self.y_var.get())]
+                elif self.handle_cat_var.get()=='One Hot Encoding':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                    try:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[self.y_var.get()]
+                    except:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[int(self.y_var.get())]
+                elif self.handle_cat_var.get()=='Ordinal Encoding':
+                    from sklearn.preprocessing import OrdinalEncoder
+                    enc = OrdinalEncoder(handle_unknown='ignore')
+                    try:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[self.y_var.get()]
+                    except:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
                         prev.y = main.data[int(self.y_var.get())]
                 from sklearn import preprocessing
                 scaler = preprocessing.StandardScaler()
@@ -1360,104 +1397,6 @@ class rgr_app:
                 self.show_res_button.place(x=400, y=165)
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
-        ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: rgr_mtds_specification(self, parent)).place(x=400, y=95)
-        ttk.Button(self.frame, text='Perform comparison', 
-            command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
-        self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-            command=lambda: self.Comp_results(self, parent))
-
-        ttk.Button(self.frame, text='Grid Search', 
-            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
-        
-        ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
-        self.y_var = tk.StringVar()
-        self.combobox1 = ttk.Combobox(self.frame, 
-            textvariable=self.y_var, width=14, values=[])
-        self.combobox1.place(x=105,y=142)
-        
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
-        self.tr_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.training.x_from_var, width=14, values=[])
-        self.tr_x_from_combobox.place(x=275, y=132)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
-        self.tr_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.training.x_to_var, width=14, values=[])
-        self.tr_x_to_combobox.place(x=275, y=157)
-
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
-
-        self.x_st_var = tk.StringVar(value='If needed')
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
-                                        values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=180)
-
-        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=205)
-        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
-        e2.place(x=150, y=207)
-        e2.insert(0, "5")
-
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
-            variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=182)
-
-        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=205)
-        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
-        rep_entry.place(x=330, y=208)
-        rep_entry.insert(0, "1")
-
-        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=280)
-        pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
-        pr_data_entry.place(x=140, y=280)
-        
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=280)
-        
-        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=325)
-        pr_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.prediction.sheet, font=myfont1, width=3)
-        pr_sheet_entry.place(x=215,y=327)
-        
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.prediction, pr_data_entry, 
-                'rgr prediction')).place(x=490, y=320)
-        
-        cb4 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.prediction.header_var, takefocus=False)
-        cb4.place(x=10, y=320)
-        
-        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=385)
-        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded', font=myfont)
-        self.prediction.data_status.place(x=120, y=385)
-
-        ttk.Button(self.frame, text='View/Change', command=lambda: 
-            Data_Preview(self, self.prediction, 
-                'rgr prediction', parent)).place(x=230, y=375)
-        
-        self.pr_method = tk.StringVar(value='Least squares')
-        
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, 
-            values=['Least squares', 'Ridge', 'Lasso', 'Random Forest', 'Support Vector',
-                'SGD', 'Nearest Neighbor', 'Gaussian Process', 'Decision Tree',
-                'Multi-layer Perceptron', 'XGBoost', 'CatBoost'])
-        self.combobox9.place(x=105,y=422)
-        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=420)
-
-        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=445)
-        self.place_result_var = tk.StringVar(value='End')
-        self.combobox9 = ttk.Combobox(self.frame, 
-            textvariable=self.place_result_var, width=10, values=['Start', 'End'])
-        self.combobox9.place(x=120,y=447)
-        
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=420)
-        self.pr_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.prediction.x_from_var, width=14, values=[])
-        self.pr_x_from_combobox.place(x=275, y=422)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=445)
-        self.pr_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.prediction.x_to_var, width=14, values=[])
-        self.pr_x_to_combobox.place(x=275, y=447)
-
         # function to predict values
         def make_regression(method):
             try:
@@ -1471,7 +1410,8 @@ class rgr_app:
                     tr_x_to = int(self.training.x_to_var.get()) + 1
                     pr_x_from = int(self.prediction.x_from_var.get())
                     pr_x_to = int(self.prediction.x_to_var.get()) + 1
-                if self.dummies_var.get()==0:
+
+                if self.handle_cat_var.get()=='No':
                     try:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[self.y_var.get()]
@@ -1479,14 +1419,66 @@ class rgr_app:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[int(self.y_var.get())]
                     X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
-                elif self.dummies_var.get()==1:
-                    X = pd.get_dummies(self.prediction.data.iloc[:,pr_x_from : pr_x_to])
+                elif self.handle_cat_var.get()=='Dummies':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                     try:
-                        training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
+                        training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
+                        onehot_columns = training_X.select_dtypes(include=['object']).columns
+                        onehot_df = training_X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = training_X.drop(onehot_columns, axis = 1)
+                        training_X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
                         training_y = self.training.data[self.y_var.get()]
+
+                        X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+                        onehot_columns = X.select_dtypes(include=['object']).columns
+                        onehot_df = X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.transform(onehot_df))
+                        df_onehot_drop = X.drop(onehot_columns, axis = 1)
+                        X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
                     except:
-                        training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
+                        training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
+                        onehot_columns = training_X.select_dtypes(include=['object']).columns
+                        onehot_df = training_X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = training_X.drop(onehot_columns, axis = 1)
+                        training_X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                        
                         training_y = self.training.data[int(self.y_var.get())]
+
+                        X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+                        onehot_columns = X.select_dtypes(include=['object']).columns
+                        onehot_df = X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.transform(onehot_df))
+                        df_onehot_drop = X.drop(onehot_columns, axis = 1)
+                        X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                elif self.handle_cat_var.get()=='One Hot Encoding':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                    try:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[self.y_var.get()]
+
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                    except:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[int(self.y_var.get())]
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                elif self.handle_cat_var.get()=='Ordinal Encoding':
+                    from sklearn.preprocessing import OrdinalEncoder
+                    enc = OrdinalEncoder(handle_unknown='ignore')
+                    try:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[self.y_var.get()]
+
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                    except:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[int(self.y_var.get())]
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+
                 from sklearn import preprocessing
                 scaler = preprocessing.StandardScaler()
                 try:
@@ -1775,7 +1767,8 @@ class rgr_app:
                     #cv-voting mode
                     if self.x_st_var.get() == 'Yes' and self.xgbr_cv_voting_mode.get()==True:
                         first_col = True
-                        cross_fold = KFold(n_splits = int(self.xgbr_cv_voting_folds.get()), shuffle=True)
+                        cross_fold = KFold(n_splits = int(self.xgbr_cv_voting_folds.get()), 
+                            shuffle=True)
                         azaza = []
                         for train_index, test_index in cross_fold.split(training_X_St):
                             xgbr.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
@@ -1797,7 +1790,8 @@ class rgr_app:
                         print(np.mean(azaza))
                     elif self.xgbr_cv_voting_mode.get()==True:
                         first_col = True
-                        cross_fold = KFold(n_splits = int(self.xgbr_cv_voting_folds.get()), shuffle=True)
+                        cross_fold = KFold(n_splits = int(self.xgbr_cv_voting_folds.get()), 
+                            shuffle=True)
                         azaza = []
                         for train_index, test_index in cross_fold.split(training_X):
                             xgbr.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
@@ -1877,7 +1871,8 @@ class rgr_app:
                     #cv-voting mode
                     if self.x_st_var.get() == 'Yes' and self.cbr_cv_voting_mode.get()==True:
                         first_col = True
-                        cross_fold = KFold(n_splits = int(self.cbr_cv_voting_folds.get()), shuffle=True)
+                        cross_fold = KFold(n_splits = int(self.cbr_cv_voting_folds.get()), 
+                            shuffle=True)
                         for train_index, test_index in cross_fold.split(training_X_St):
                             cbr.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
                                 eval_set=(training_X_St.iloc[test_index], training_y[test_index]), 
@@ -1893,7 +1888,8 @@ class rgr_app:
                         pr_values= np.mean(pr_values, axis=1)
                     elif self.cbr_cv_voting_mode.get()==True:
                         first_col = True
-                        cross_fold = KFold(n_splits = int(self.cbr_cv_voting_folds.get()), shuffle=True)
+                        cross_fold = KFold(n_splits = int(self.cbr_cv_voting_folds.get()), 
+                            shuffle=True)
                         for train_index, test_index in cross_fold.split(training_X):
                             cbr.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
                                 eval_set=(training_X.iloc[test_index], training_y[test_index]), 
@@ -1927,6 +1923,102 @@ class rgr_app:
                     else:
                         cbr.fit(training_X, training_y)
                         pr_values = cbr.predict(X)
+
+                # LightGBM
+                if method == 'LightGBM':
+                    from lightgbm import LGBMRegressor
+                    if self.cbr_use_gpu.get() == False:
+                        lgbmr = LGBMRegressor(
+                            # boosting_type='dart',
+                            num_leaves=80,
+                            n_estimators=5000,
+                            learning_rate=0.01,
+                            silent=False,
+                            subsample=0.66,
+                            colsample_bytree=0.8,
+                            reg_lambda=2.0
+                        )
+                    else:
+                        lgbmr = LGBMRegressor(
+                            # boosting_type='dart',
+                            num_leaves=80,
+                            n_estimators=5000,
+                            learning_rate=0.01,
+                            silent=False,
+                            subsample=0.66,
+                            colsample_bytree=0.8,
+                            reg_lambda=2.0
+                        )
+
+                    #cv-voting mode
+                    if self.x_st_var.get() == 'Yes' and self.lgbmr_cv_voting_mode.get()==True:
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.lgbmr_cv_voting_folds.get()), 
+                            shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X_St):
+                            lgbmr.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X_St.iloc[test_index], training_y[test_index])], 
+                                early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
+                                # eval_metric=self.lgbmr_eval_metric.get()
+                                eval_metric='l2'
+                                )
+                            # best_iteration = lgbmr.get_booster().best_ntree_limit
+                            azaza.append(lgbmr.best_score_['l2'])
+                            print(azaza)
+                            predict = lgbmr.predict(X_St)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= np.mean(pr_values, axis=1)
+                        # print(np.mean(azaza))
+                    elif self.lgbmr_cv_voting_mode.get()==True:
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.lgbmr_cv_voting_folds.get()), 
+                            shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X):
+                            lgbmr.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X.iloc[test_index], training_y[test_index])],
+                                early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
+                                # eval_metric=self.lgbmr_eval_metric.get()
+                                eval_metric='l2'
+                                )
+                            # best_iteration = lgbmr.get_booster().best_ntree_limit
+                            azaza.append(lgbmr.best_score_['l2'])
+                            print(azaza)
+                            predict = lgbmr.predict(X)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= np.mean(pr_values, axis=1)
+                        # print(np.mean(azaza))
+
+                    # # early-stopping mode
+                    # elif self.x_st_var.get() == 'Yes' and self.cbr_early_stopping.get()==True:
+                    #     cbr.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y), 
+                    #         early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                    #         use_best_model=True)
+                    #     pr_values = cbr.predict(X_St)
+                    # elif self.cbr_early_stopping.get()==True:
+                    #     cbr.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y), 
+                    #         early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                    #         use_best_model=True)
+                    #     pr_values = cbr.predict(X)
+
+                    # standard mode
+                    elif self.x_st_var.get() == 'Yes':
+                        lgbmr.fit(training_X_St, training_y)
+                        pr_values = lgbmr.predict(X_St)
+                    else:
+                        lgbmr.fit(training_X, training_y)
+                        pr_values = lgbmr.predict(X)
 
                 if self.place_result_var.get() == 'Start':
                     self.prediction.data.insert(0, 'Y', pr_values)
@@ -1972,6 +2064,142 @@ class rgr_app:
                 except ValueError as e:
                     self.pb2.destroy()
                     messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
+
+        # Application interface
+
+        self.bg_frame = ttk.Frame(rgr_app.root, width=10, height=h)
+        self.bg_frame.place(x=0, y=0)
+
+        self.frame = ttk.Frame(rgr_app.root, width=w, height=h)
+        self.frame.place(x=10, y=0)
+        
+        ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
+        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
+        e1.place(x=120, y=10)
+        
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, e1)).place(x=490, y=10)
+        
+        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
+        training_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.training.sheet, font=myfont1, width=3)
+        training_sheet_entry.place(x=215,y=52)
+                
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.training, e1, 
+                'rgr training')).place(x=490, y=50)
+        
+        cb1 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.training.header_var, takefocus=False)
+        cb1.place(x=10, y=50)
+        
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
+        self.training.data_status = ttk.Label(self.frame, text='Not Loaded')
+        self.training.data_status.place(x=120, y=95)
+
+        ttk.Button(self.frame, text='View/Change', 
+            command=lambda: Data_Preview(self, self.training, 
+                'rgr training', parent)).place(x=230, y=95)
+
+        ttk.Button(self.frame, text="Methods' specifications", 
+                  command=lambda: rgr_mtds_specification(self, parent)).place(x=400, y=95)
+        ttk.Button(self.frame, text='Perform comparison', 
+            command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
+        self.show_res_button = ttk.Button(self.frame, text='Show Results', 
+            command=lambda: self.Comp_results(self, parent))
+
+        ttk.Button(self.frame, text='Grid Search', 
+            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
+        
+        ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
+        self.y_var = tk.StringVar()
+        self.combobox1 = ttk.Combobox(self.frame, 
+            textvariable=self.y_var, width=14, values=[])
+        self.combobox1.place(x=105,y=142)
+        
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.tr_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.training.x_from_var, width=14, values=[])
+        self.tr_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.tr_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.training.x_to_var, width=14, values=[])
+        self.tr_x_to_combobox.place(x=275, y=157)
+
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
+
+        self.x_st_var = tk.StringVar(value='If needed')
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=12,
+                                        values=['No', 'If needed', 'Yes'])
+        self.combobox2.place(x=160,y=180)
+
+        ttk.Label(self.frame, text='Handle categorical', font=myfont1).place(x=30, y=205)
+        self.handle_cat_var = tk.StringVar(value='No')
+        self.handle_cat_combobox = ttk.Combobox(self.frame, textvariable=self.handle_cat_var, width=12,
+                                        values=['No', 'Dummies', 'One Hot Encoding', 'Ordinal Encoding'])
+        self.handle_cat_combobox.place(x=160,y=208)
+
+        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=235)
+        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
+        e2.place(x=150, y=237)
+        e2.insert(0, "5")
+
+        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=235)
+        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
+        rep_entry.place(x=330, y=238)
+        rep_entry.insert(0, "1")
+
+        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=280)
+        pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
+        pr_data_entry.place(x=140, y=280)
+        
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=280)
+        
+        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=325)
+        pr_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.prediction.sheet, font=myfont1, width=3)
+        pr_sheet_entry.place(x=215,y=327)
+        
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.prediction, pr_data_entry, 
+                'rgr prediction')).place(x=490, y=320)
+        
+        cb4 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.prediction.header_var, takefocus=False)
+        cb4.place(x=10, y=320)
+        
+        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=385)
+        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded', font=myfont)
+        self.prediction.data_status.place(x=120, y=385)
+
+        ttk.Button(self.frame, text='View/Change', command=lambda: 
+            Data_Preview(self, self.prediction, 
+                'rgr prediction', parent)).place(x=230, y=375)
+        
+        self.pr_method = tk.StringVar(value='Least squares')
+        
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, 
+            values=['Least squares', 'Ridge', 'Lasso', 'Random Forest', 'Support Vector',
+                'SGD', 'Nearest Neighbor', 'Gaussian Process', 'Decision Tree',
+                'Multi-layer Perceptron', 'XGBoost', 'CatBoost', 'LightGBM'])
+        self.combobox9.place(x=105,y=422)
+        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=420)
+
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=445)
+        self.place_result_var = tk.StringVar(value='End')
+        self.combobox9 = ttk.Combobox(self.frame, 
+            textvariable=self.place_result_var, width=10, values=['Start', 'End'])
+        self.combobox9.place(x=120,y=447)
+        
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=420)
+        self.pr_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.prediction.x_from_var, width=14, values=[])
+        self.pr_x_from_combobox.place(x=275, y=422)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=445)
+        self.pr_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.prediction.x_to_var, width=14, values=[])
+        self.pr_x_to_combobox.place(x=275, y=447)
 
         ttk.Button(self.frame, text='Predict values', 
             command=lambda: 

@@ -1,7 +1,6 @@
 # Imports
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 import os
 import sys
 import numpy as np
@@ -41,7 +40,7 @@ class dcmp_app:
             self.decomposition.pt = None
         
         #setting main window's parameters      
-        w = 600
+        w = 620
         h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
@@ -55,77 +54,6 @@ class dcmp_app:
         dcmp_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(dcmp_app.root, parent))
 
         parent.iconify()
-        
-        self.frame = ttk.Frame(dcmp_app.root, width=w, height=h)
-        self.frame.place(x=0, y=0)
-
-        ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
-        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
-        e1.place(x=120, y=10)
-
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, e1)).place(x=490, y=10)
-
-        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
-        dcmp_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.decomposition.sheet, font=myfont1, width=3)
-        dcmp_sheet_entry.place(x=215,y=52)
-
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.decomposition, e1, 'dcmp')).place(x=490, y=50)
-        
-        cb1 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.decomposition.header_var, takefocus=False)
-        cb1.place(x=10, y=50)
-
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
-        self.decomposition.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.decomposition.data_status.place(x=120, y=95)
-
-        ttk.Button(self.frame, text='View/Change', 
-            command=lambda: 
-                Data_Preview(self, self.decomposition, 'dcmp', parent)).place(x=230, y=95)
-
-        ttk.Label(self.frame, text='Number of features:', font=myfont1).place(x=30, y=140)
-        self.n_features_var = tk.StringVar(value='All')
-        self.n_features_entry = ttk.Entry(self.frame, 
-            textvariable=self.n_features_var, font=myfont1, width=3)
-        self.n_features_entry.place(x=170, y=142)
-
-        ttk.Button(self.frame, text="Methods' specifications", 
-            command=lambda: dcmp_mtds_specification(self, parent)).place(x=400, y=100)
-
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
-        self.dcmp_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.decomposition.x_from_var, width=14, values=[])
-        self.dcmp_x_from_combobox.place(x=275, y=132)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
-        self.dcmp_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.decomposition.x_to_var, width=14, values=[])
-        self.dcmp_x_to_combobox.place(x=275, y=157)
-
-        self.x_st_var = tk.StringVar(value='If needed')
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=180)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
-                                        values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=185)
-
-        self.dummies_var = tk.IntVar(value=0)
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
-            variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=185)
-
-        ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=230)
-        self.dcmp_method = tk.StringVar(value='PCA')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.dcmp_method, width=15, 
-            values=['PCA', 'Factor Analysis', 'Incremental PCA', 'Kernel PCA', 'Fast ICA'])
-        self.combobox9.place(x=150,y=232)
-
-        ttk.Label(self.frame, text='Result place', font=myfont1).place(x=30, y=260)
-        self.place_method = tk.StringVar(value='Join: end')
-        self.combobox10 = ttk.Combobox(self.frame, textvariable=self.place_method, width=10, 
-            values=['Join: start', 'Join: end', 'Replace'])
-        self.combobox10.place(x=150,y=262)
 
         # methods parameters
         self.pca_copy = tk.BooleanVar(value=True)
@@ -328,6 +256,82 @@ class dcmp_app:
                 decompose(method)
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='error: "{}"'.format(e))
+
+        # Application interface
+
+        self.bg_frame = ttk.Frame(dcmp_app.root, width=10, height=h)
+        self.bg_frame.place(x=0, y=0)
+
+        self.frame = ttk.Frame(dcmp_app.root, width=w, height=h)
+        self.frame.place(x=10, y=0)
+
+        ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
+        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
+        e1.place(x=120, y=10)
+
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, e1)).place(x=490, y=10)
+
+        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
+        dcmp_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.decomposition.sheet, font=myfont1, width=3)
+        dcmp_sheet_entry.place(x=215,y=52)
+
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.decomposition, e1, 'dcmp')).place(x=490, y=50)
+        
+        cb1 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.decomposition.header_var, takefocus=False)
+        cb1.place(x=10, y=50)
+
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
+        self.decomposition.data_status = ttk.Label(self.frame, text='Not Loaded')
+        self.decomposition.data_status.place(x=120, y=95)
+
+        ttk.Button(self.frame, text='View/Change', 
+            command=lambda: 
+                Data_Preview(self, self.decomposition, 'dcmp', parent)).place(x=230, y=95)
+
+        ttk.Label(self.frame, text='Number of features:', font=myfont1).place(x=30, y=140)
+        self.n_features_var = tk.StringVar(value='All')
+        self.n_features_entry = ttk.Entry(self.frame, 
+            textvariable=self.n_features_var, font=myfont1, width=3)
+        self.n_features_entry.place(x=170, y=142)
+
+        ttk.Button(self.frame, text="Methods' specifications", 
+            command=lambda: dcmp_mtds_specification(self, parent)).place(x=400, y=100)
+
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.dcmp_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.decomposition.x_from_var, width=14, values=[])
+        self.dcmp_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.dcmp_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.decomposition.x_to_var, width=14, values=[])
+        self.dcmp_x_to_combobox.place(x=275, y=157)
+
+        self.x_st_var = tk.StringVar(value='If needed')
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=180)
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
+                                        values=['No', 'If needed', 'Yes'])
+        self.combobox2.place(x=150,y=185)
+
+        self.dummies_var = tk.IntVar(value=0)
+        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
+            variable=self.dummies_var, takefocus=False)
+        cb2.place(x=270, y=185)
+
+        ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=230)
+        self.dcmp_method = tk.StringVar(value='PCA')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.dcmp_method, width=15, 
+            values=['PCA', 'Factor Analysis', 'Incremental PCA', 'Kernel PCA', 'Fast ICA'])
+        self.combobox9.place(x=150,y=232)
+
+        ttk.Label(self.frame, text='Result place', font=myfont1).place(x=30, y=260)
+        self.place_method = tk.StringVar(value='Join: end')
+        self.combobox10 = ttk.Combobox(self.frame, textvariable=self.place_method, width=10, 
+            values=['Join: start', 'Join: end', 'Replace'])
+        self.combobox10.place(x=150,y=262)
 
         ttk.Button(self.frame, text='Decompose', 
                   command=lambda: try_decompose(method=self.dcmp_method.get())).place(x=400, y=230)

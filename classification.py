@@ -1,7 +1,6 @@
 # Imports
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext
 from threading import Thread
 import os
 import sys
@@ -10,7 +9,7 @@ import webbrowser
 import pandas as pd
 import sklearn
 from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results
+from utils import Data_Preview, quit_back, open_file, load_data, save_results, open_sql
 
 # fonts
 myfont = (None, 13)
@@ -176,20 +175,52 @@ class clf_app:
                     except:
                         x_from = int(main.x_from_var.get())
                         x_to = int(main.x_to_var.get()) + 1
-                    if prev.dummies_var.get()==0:
+                    if self.handle_cat_var.get()=='No':
                         try:
                             prev.X = main.data.iloc[:,x_from : x_to]
-                            prev.y = main.data[prev.y_var.get()]
+                            prev.y = main.data[self.y_var.get()]
                         except:
                             prev.X = main.data.iloc[:,x_from : x_to]
-                            prev.y = main.data[int(prev.y_var.get())]
-                    elif prev.dummies_var.get()==1:
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='Dummies':
+                        from sklearn.preprocessing import OneHotEncoder
+                        enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                         try:
-                            prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
-                            prev.y = main.data[prev.y_var.get()]
+                            prev.X = main.data.iloc[:,x_from : x_to]
+                            onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                            onehot_df = prev.X[onehot_columns]
+                            onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                            df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                            prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
+                            prev.y = main.data[self.y_var.get()]
                         except:
-                            prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
-                            prev.y = main.data[int(prev.y_var.get())]
+                            prev.X = main.data.iloc[:,x_from : x_to]
+                            onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                            onehot_df = prev.X[onehot_columns]
+                            onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                            df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                            prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='One Hot Encoding':
+                        from sklearn.preprocessing import OneHotEncoder
+                        enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                        try:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[self.y_var.get()]
+                        except:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[int(self.y_var.get())]
+                    elif self.handle_cat_var.get()=='Ordinal Encoding':
+                        from sklearn.preprocessing import OrdinalEncoder
+                        enc = OrdinalEncoder(handle_unknown='ignore')
+                        try:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[self.y_var.get()]
+                        except:
+                            prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                            prev.y = main.data[int(self.y_var.get())]
                     from sklearn import preprocessing
                     scaler = preprocessing.StandardScaler()
                     prev.X_St = scaler.fit_transform(prev.X)
@@ -346,7 +377,7 @@ class clf_app:
             self.prediction.pt = None
         
         #setting main window's parameters    
-        w = 600
+        w = 620
         h = 500   
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
@@ -362,35 +393,6 @@ class clf_app:
 
         parent.iconify()
         
-        self.frame = ttk.Frame(clf_app.root, width=w, height=h)
-        self.frame.place(x=0, y=0)
-        
-        ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
-        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
-        e1.place(x=120, y=10)
-        
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, e1)).place(x=490, y=10)
-        
-        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
-        training_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.training.sheet, font=myfont1, width=3)
-        training_sheet_entry.place(x=215,y=52)
-                
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.training, e1, 'clf training')).place(x=490, y=50)
-        
-        cb1 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.training.header_var, takefocus=False)
-        cb1.place(x=10, y=50)
-        
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
-        self.training.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.training.data_status.place(x=120, y=95)
-
-        ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.training, 
-                'clf training', parent)).place(x=230, y=95)
         #methods parameters
         self.rc_include_comp = tk.BooleanVar(value=True)
         self.rc_alpha = tk.StringVar(value='1.0')
@@ -526,6 +528,12 @@ class clf_app:
         self.xgbc_lambda = tk.StringVar(value='1.0')
         self.xgbc_alpha = tk.StringVar(value='0.0')
         self.xgbc_use_gpu = tk.BooleanVar(value=False)
+        self.xgbc_eval_metric = tk.StringVar(value='logloss')
+        self.xgbc_early_stopping = tk.BooleanVar(value=False)
+        self.xgbc_n_iter_no_change = tk.StringVar(value='100')
+        self.xgbc_validation_fraction = tk.StringVar(value='0.2')
+        self.xgbc_cv_voting_mode = tk.BooleanVar(value=False)
+        self.xgbc_cv_voting_folds = tk.StringVar(value='5')
 
         self.cbc_include_comp = tk.BooleanVar(value=True)
         self.cbc_iterations = tk.StringVar(value='1000')
@@ -537,6 +545,11 @@ class clf_app:
         self.cbc_random_strength = tk.StringVar(value='1.0')
         self.cbc_use_gpu = tk.BooleanVar(value=False)
         self.cbc_cf_list = tk.StringVar(value='[]')
+        self.cbc_early_stopping = tk.BooleanVar(value=False)
+        self.cbc_n_iter_no_change = tk.StringVar(value='100')
+        self.cbc_validation_fraction = tk.StringVar(value='0.2')
+        self.cbc_cv_voting_mode = tk.BooleanVar(value=False)
+        self.cbc_cv_voting_folds = tk.StringVar(value='5')
 
         # flag for stopping comparison
         self.continue_flag = True
@@ -550,19 +563,51 @@ class clf_app:
                 except:
                     x_from = int(main.x_from_var.get())
                     x_to = int(main.x_to_var.get()) + 1
-                if self.dummies_var.get()==0:
+                if self.handle_cat_var.get()=='No':
                     try:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[self.y_var.get()]
                     except:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[int(self.y_var.get())]
-                elif self.dummies_var.get()==1:
+                elif self.handle_cat_var.get()=='Dummies':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                     try:
-                        prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
+                        prev.X = main.data.iloc[:,x_from : x_to]
+                        onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                        onehot_df = prev.X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                        prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
                         prev.y = main.data[self.y_var.get()]
                     except:
-                        prev.X = pd.get_dummies(main.data.iloc[:,x_from : x_to])
+                        prev.X = main.data.iloc[:,x_from : x_to]
+                        onehot_columns = prev.X.select_dtypes(include=['object']).columns
+                        onehot_df = prev.X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = prev.X.drop(onehot_columns, axis = 1)
+                        prev.X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                        
+                        prev.y = main.data[int(self.y_var.get())]
+                elif self.handle_cat_var.get()=='One Hot Encoding':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                    try:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[self.y_var.get()]
+                    except:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[int(self.y_var.get())]
+                elif self.handle_cat_var.get()=='Ordinal Encoding':
+                    from sklearn.preprocessing import OrdinalEncoder
+                    enc = OrdinalEncoder(handle_unknown='ignore')
+                    try:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
+                        prev.y = main.data[self.y_var.get()]
+                    except:
+                        prev.X = pd.DataFrame(enc.fit_transform(main.data.iloc[:,x_from : x_to]))
                         prev.y = main.data[int(self.y_var.get())]
                 from sklearn import preprocessing
                 scaler = preprocessing.StandardScaler()
@@ -891,7 +936,43 @@ class clf_app:
                             reg_alpha=float(self.xgbc_alpha.get()),
                             tree_method='gpu_hist', gpu_id=0)
                     xgbc_scores = np.array([])
-                    if self.x_st_var.get() == 'Yes':
+                    if self.x_st_var.get() == 'Yes' and self.xgbc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X_St, check_val_X_St, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X_St[train_index], prev.y[train_index], 
+                                            test_size=float(self.xgbc_validation_fraction.get()))
+                                    xgbc.fit(X=check_tr_X_St, y=check_tr_y, eval_set=[(check_val_X_St, check_val_y)],
+                                        early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                                        eval_metric=self.xgbc_eval_metric.get()
+                                        )
+                                    best_iteration = xgbc.get_booster().best_ntree_limit
+                                    score = sklearn.metrics.accuracy_score(xgbc.predict(prev.X_St[test_index], 
+                                        ntree_limit=best_iteration), 
+                                        prev.y[test_index])
+                                    xgbc_scores = np.append(xgbc_scores, score)
+                                    self.pb1.step(1)
+                                    print('XGB Done')
+                    elif self.xgbc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X):
+                                if self.continue_flag:
+                                    check_tr_X, check_val_X, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X.iloc[train_index], prev.y[train_index], 
+                                            test_size=float(self.xgbc_validation_fraction.get()))
+                                    xgbc.fit(X=check_tr_X, y=check_tr_y, eval_set=[(check_val_X, check_val_y)],
+                                        early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                                        eval_metric=self.xgbc_eval_metric.get()
+                                        )
+                                    best_iteration = xgbc.get_booster().best_ntree_limit
+                                    score = sklearn.metrics.accuracy_score(xgbc.predict(prev.X.iloc[test_index], 
+                                        ntree_limit=best_iteration), 
+                                        prev.y[test_index])
+                                    xgbc_scores = np.append(xgbc_scores, score)
+                                    self.pb1.step(1)
+                                    print('XGB Done')
+                    elif self.x_st_var.get() == 'Yes' and self.xgbc_early_stopping.get()==False:
                         for fold in folds_list:
                             if self.continue_flag:
                                 xgbc_scores = np.append(xgbc_scores, 
@@ -936,7 +1017,37 @@ class clf_app:
                             colsample_bylevel=float(self.cbc_colsample_bylevel.get()),
                             random_strength=float(self.cbc_random_strength.get()))
                     cbc_scores = np.array([])
-                    if self.x_st_var.get() == 'Yes':
+                    if self.x_st_var.get() == 'Yes' and self.cbc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X_St, check_val_X_St, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X_St[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbc_validation_fraction.get()))
+                                    cbc.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y),
+                                        early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                                        use_best_model=True)
+                                    score = sklearn.metrics.accuracy_score(cbc.predict(prev.X_St[test_index]), 
+                                        prev.y[test_index])
+                                    cbc_scores = np.append(cbc_scores, score)
+                                    self.pb1.step(1)
+                                    print('CB Done')
+                    elif self.cbc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X, check_val_X, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X.iloc[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbc_validation_fraction.get()))
+                                    cbc.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y),
+                                        early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                                        use_best_model=True)
+                                    score = sklearn.metrics.accuracy_score(cbc.predict(prev.X.iloc[test_index]), 
+                                        prev.y[test_index])
+                                    cbc_scores = np.append(cbc_scores, score)
+                                    self.pb1.step(1)
+                                    print('CB Done')
+                    elif self.x_st_var.get() == 'Yes' and self.cbc_early_stopping.get()==False:
                         for fold in folds_list:
                             if self.continue_flag:
                                 cbc_scores = np.append(cbc_scores, 
@@ -995,102 +1106,6 @@ class clf_app:
                 self.show_res_button.place(x=400, y=165)
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
-        ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: clf_mtds_specification(self, parent)).place(x=400, y=95)
-        ttk.Button(self.frame, text='Perform comparison', 
-            command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
-        self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-            command=lambda: self.Comp_results(self, parent))
-        
-        ttk.Button(self.frame, text='Grid Search', 
-            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
-        
-        ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
-        self.y_var = tk.StringVar()
-        self.combobox1 = ttk.Combobox(self.frame, textvariable=self.y_var, width=14, values=[])
-        self.combobox1.place(x=105,y=142)
-        
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
-        self.tr_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.training.x_from_var, width=14, values=[])
-        self.tr_x_from_combobox.place(x=275, y=132)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
-        self.tr_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.training.x_to_var, width=14, values=[])
-        self.tr_x_to_combobox.place(x=275, y=157)
-
-        self.x_st_var = tk.StringVar(value='If needed')
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
-                                        values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=180)
-
-        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=205)
-        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
-        e2.place(x=150, y=207)
-        e2.insert(0, "5")
-
-        self.dummies_var = tk.IntVar(value=0)
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
-            variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=182)
-
-        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=205)
-        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
-        rep_entry.place(x=330, y=208)
-        rep_entry.insert(0, "1")
-        
-        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=250)
-        pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
-        pr_data_entry.place(x=140, y=250)
-        
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=250)
-        
-        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=295)
-        pr_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.prediction.sheet, font=myfont1, width=3)
-        pr_sheet_entry.place(x=215,y=297)
-        
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.prediction, 
-                pr_data_entry, 'clf prediction')).place(x=490, y=290)
-        
-        cb4 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.prediction.header_var, takefocus=False)
-        cb4.place(x=10, y=290)
-        
-        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=345)
-        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.prediction.data_status.place(x=120, y=345)
-
-        ttk.Button(self.frame, text='View/Change', command=lambda: 
-            Data_Preview(self, self.prediction, 
-                'clf prediction', parent)).place(x=230, y=345)
-        
-        self.pr_method = tk.StringVar(value='Decision Tree')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, 
-            values=['Decision Tree', 'Ridge', 'Random Forest', 'Support Vector', 'SGD',  
-                    'Nearest Neighbor', 'Gaussian Process', 'Multi-layer Perceptron',
-                    'XGBoost', 'CatBoost'])
-        self.combobox9.place(x=105,y=402)
-        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=400)
-
-        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=425)
-        self.place_result_var = tk.StringVar(value='End')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, 
-            width=10, values=['Start', 'End'])
-        self.combobox9.place(x=120,y=427)
-        
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=400)
-        self.pr_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.prediction.x_from_var, width=14, values=[])
-        self.pr_x_from_combobox.place(x=275, y=402)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=425)
-        self.pr_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.prediction.x_to_var, width=14, values=[])
-        self.pr_x_to_combobox.place(x=275, y=427)
-
         # function to predict class        
         def clf_predict_class(method):
             try:
@@ -1104,7 +1119,7 @@ class clf_app:
                     tr_x_to = int(self.training.x_to_var.get()) + 1
                     pr_x_from = int(self.prediction.x_from_var.get())
                     pr_x_to = int(self.prediction.x_to_var.get()) + 1
-                if self.dummies_var.get()==0:
+                if self.handle_cat_var.get()=='No':
                     try:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[self.y_var.get()]
@@ -1112,14 +1127,65 @@ class clf_app:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[int(self.y_var.get())]
                     X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
-                elif self.dummies_var.get()==1:
-                    X = pd.get_dummies(self.prediction.data.iloc[:,pr_x_from : pr_x_to])
+                elif self.handle_cat_var.get()=='Dummies':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
                     try:
-                        training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
+                        training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
+                        onehot_columns = training_X.select_dtypes(include=['object']).columns
+                        onehot_df = training_X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = training_X.drop(onehot_columns, axis = 1)
+                        training_X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+
                         training_y = self.training.data[self.y_var.get()]
+
+                        X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+                        onehot_columns = X.select_dtypes(include=['object']).columns
+                        onehot_df = X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.transform(onehot_df))
+                        df_onehot_drop = X.drop(onehot_columns, axis = 1)
+                        X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
                     except:
-                        training_X = pd.get_dummies(self.training.data.iloc[:,tr_x_from : tr_x_to])
+                        training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
+                        onehot_columns = training_X.select_dtypes(include=['object']).columns
+                        onehot_df = training_X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.fit_transform(onehot_df))
+                        df_onehot_drop = training_X.drop(onehot_columns, axis = 1)
+                        training_X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                        
                         training_y = self.training.data[int(self.y_var.get())]
+
+                        X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+                        onehot_columns = X.select_dtypes(include=['object']).columns
+                        onehot_df = X[onehot_columns]
+                        onehot_df = pd.DataFrame(enc.transform(onehot_df))
+                        df_onehot_drop = X.drop(onehot_columns, axis = 1)
+                        X = pd.concat([df_onehot_drop, onehot_df], axis = 1)
+                elif self.handle_cat_var.get()=='One Hot Encoding':
+                    from sklearn.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+                    try:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[self.y_var.get()]
+
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                    except:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[int(self.y_var.get())]
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                elif self.handle_cat_var.get()=='Ordinal Encoding':
+                    from sklearn.preprocessing import OrdinalEncoder
+                    enc = OrdinalEncoder(handle_unknown='ignore')
+                    try:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[self.y_var.get()]
+
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
+                    except:
+                        training_X = pd.DataFrame(enc.fit_transform(self.training.data.iloc[:,tr_x_from : tr_x_to]))
+                        training_y = self.training.data[int(self.y_var.get())]
+                        X = pd.DataFrame(enc.transform(self.prediction.data.iloc[:,pr_x_from : pr_x_to]))
                 from sklearn import preprocessing
                 scaler = preprocessing.StandardScaler()
                 try:
@@ -1127,8 +1193,8 @@ class clf_app:
                     training_X_St = scaler.fit_transform(training_X)
                 except:
                     self.x_st_var.set('No')
-                training_X_St = scaler.fit_transform(training_X)
-                
+                from sklearn.model_selection import train_test_split, KFold
+
                 if method == 'Decision Tree':
                     from sklearn.tree import DecisionTreeClassifier
                     dtc = DecisionTreeClassifier(
@@ -1357,7 +1423,72 @@ class clf_app:
                             reg_alpha=float(self.xgbc_alpha.get()),
                             verbosity=2,
                             tree_method='gpu_hist', gpu_id=0)
-                    if self.x_st_var.get() == 'Yes':
+                    #cv-voting mode
+                    if self.x_st_var.get() == 'Yes' and self.xgbc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.xgbc_cv_voting_folds.get()), shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X_St):
+                            xgbc.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X_St.iloc[test_index], training_y[test_index])], 
+                                early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                                eval_metric=self.xgbc_eval_metric.get()
+                                )
+                            best_iteration = xgbc.get_booster().best_ntree_limit
+                            azaza.append(xgbc.get_booster().best_score)
+                            print(azaza)
+                            predict = xgbc.predict(X_St, ntree_limit=best_iteration)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+                        print(mode(azaza))
+                    elif self.xgbc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.xgbc_cv_voting_folds.get()), shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X):
+                            xgbc.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X.iloc[test_index], training_y[test_index])],
+                                early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                                eval_metric=self.xgbc_eval_metric.get()
+                                )
+                            best_iteration = xgbc.get_booster().best_ntree_limit
+                            azaza.append(xgbc.get_booster().best_score)
+                            print(azaza)
+                            predict = xgbc.predict(X, ntree_limit=best_iteration)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+                        print(mode(azaza))
+
+                    # early-stopping mode
+                    elif self.x_st_var.get() == 'Yes' and self.xgbc_early_stopping.get()==True:
+                        xgbc.fit(X=check_tr_X_St, y=check_tr_y, eval_set=[(check_val_X_St, check_val_y)], 
+                            early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                            eval_metric=self.xgbc_eval_metric.get()
+                            )
+                        best_iteration = xgbc.get_booster().best_ntree_limit
+                        pr_values = xgbc.predict(X_St, ntree_limit=best_iteration)
+                    elif self.xgbc_early_stopping.get()==True:
+                        xgbc.fit(X=check_tr_X, y=check_tr_y, eval_set=[(check_val_X, check_val_y)], 
+                            early_stopping_rounds=int(self.xgbc_n_iter_no_change.get()),
+                            eval_metric=self.xgbc_eval_metric.get()
+                            )
+                        best_iteration = xgbc.get_booster().best_ntree_limit
+                        pr_values = xgbc.predict(X, ntree_limit=best_iteration)
+
+                    # standard mode
+                    elif self.x_st_var.get() == 'Yes':
                         xgbc.fit(training_X_St, training_y)
                         pr_values = xgbc.predict(X_St)
                     else:
@@ -1392,7 +1523,56 @@ class clf_app:
                                 else float(self.cbc_subsample.get())), 
                             colsample_bylevel=float(self.cbc_colsample_bylevel.get()),
                             random_strength=float(self.cbc_random_strength.get()))
-                    if self.x_st_var.get() == 'Yes':
+                    #cv-voting mode
+                    if self.x_st_var.get() == 'Yes' and self.cbc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.cbc_cv_voting_folds.get()), shuffle=True)
+                        for train_index, test_index in cross_fold.split(training_X_St):
+                            cbc.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
+                                eval_set=(training_X_St.iloc[test_index], training_y[test_index]), 
+                                early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                                use_best_model=True)
+                            predict = cbc.predict(X_St)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+                    elif self.cbc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.cbc_cv_voting_folds.get()), shuffle=True)
+                        for train_index, test_index in cross_fold.split(training_X):
+                            cbc.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
+                                eval_set=(training_X.iloc[test_index], training_y[test_index]), 
+                                early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                                use_best_model=True)
+                            predict = cbc.predict(X)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+
+                    # early-stopping mode
+                    elif self.x_st_var.get() == 'Yes' and self.cbc_early_stopping.get()==True:
+                        cbc.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y), 
+                            early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                            use_best_model=True)
+                        pr_values = cbc.predict(X_St)
+                    elif self.cbc_early_stopping.get()==True:
+                        cbc.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y), 
+                            early_stopping_rounds=int(self.cbc_n_iter_no_change.get()),
+                            use_best_model=True)
+                        pr_values = cbc.predict(X)
+
+                    # standard mode
+                    elif self.x_st_var.get() == 'Yes':
                         cbc.fit(training_X_St, training_y)
                         pr_values = cbc.predict(X_St)
                     else:
@@ -1443,6 +1623,142 @@ class clf_app:
                 except ValueError as e:
                     self.pb2.destroy()
                     messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
+
+        # Application interface
+
+        self.bg_frame = ttk.Frame(clf_app.root, width=10, height=h)
+        self.bg_frame.place(x=0, y=0)
+
+        self.frame = ttk.Frame(clf_app.root, width=w, height=h)
+        self.frame.place(x=10, y=0)
+        
+        ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
+        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
+        e1.place(x=120, y=10)
+        
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, e1)).place(x=490, y=10)
+        
+        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
+        training_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.training.sheet, font=myfont1, width=3)
+        training_sheet_entry.place(x=215,y=52)
+                
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.training, e1, 'clf training')).place(x=490, y=50)
+        
+        cb1 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.training.header_var, takefocus=False)
+        cb1.place(x=10, y=50)
+        
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
+        self.training.data_status = ttk.Label(self.frame, text='Not Loaded')
+        self.training.data_status.place(x=120, y=95)
+
+        ttk.Button(self.frame, text='View/Change', 
+            command=lambda: Data_Preview(self, self.training, 
+                'clf training', parent)).place(x=230, y=95)
+
+        ttk.Button(self.frame, text="Methods' specifications", 
+                  command=lambda: clf_mtds_specification(self, parent)).place(x=400, y=95)
+        ttk.Button(self.frame, text='Perform comparison', 
+            command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
+        self.show_res_button = ttk.Button(self.frame, text='Show Results', 
+            command=lambda: self.Comp_results(self, parent))
+        
+        ttk.Button(self.frame, text='Grid Search', 
+            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
+        
+        ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
+        self.y_var = tk.StringVar()
+        self.combobox1 = ttk.Combobox(self.frame, textvariable=self.y_var, width=14, values=[])
+        self.combobox1.place(x=105,y=142)
+        
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.tr_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.training.x_from_var, width=14, values=[])
+        self.tr_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.tr_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.training.x_to_var, width=14, values=[])
+        self.tr_x_to_combobox.place(x=275, y=157)
+
+        self.x_st_var = tk.StringVar(value='If needed')
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
+                                        values=['No', 'If needed', 'Yes'])
+        self.combobox2.place(x=150,y=180)
+
+        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=205)
+        e2 = ttk.Entry(self.frame, font=myfont1, width=4)
+        e2.place(x=150, y=207)
+        e2.insert(0, "5")
+
+        self.dummies_var = tk.IntVar(value=0)
+        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
+            variable=self.dummies_var, takefocus=False)
+        cb2.place(x=270, y=182)
+
+        # self.onehot_var = tk.IntVar(value=0)
+        # onehot_cb = ttk.Checkbutton(self.frame, text="One-Hot Encoding", 
+        #     variable=self.onehot_var, takefocus=False)
+        # onehot_cb.place(x=270, y=182)
+
+        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=205)
+        rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
+        rep_entry.place(x=330, y=208)
+        rep_entry.insert(0, "1")
+        
+        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=250)
+        pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
+        pr_data_entry.place(x=140, y=250)
+        
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=250)
+        
+        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=295)
+        pr_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.prediction.sheet, font=myfont1, width=3)
+        pr_sheet_entry.place(x=215,y=297)
+        
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.prediction, 
+                pr_data_entry, 'clf prediction')).place(x=490, y=290)
+        
+        cb4 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.prediction.header_var, takefocus=False)
+        cb4.place(x=10, y=290)
+        
+        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=345)
+        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded')
+        self.prediction.data_status.place(x=120, y=345)
+
+        ttk.Button(self.frame, text='View/Change', command=lambda: 
+            Data_Preview(self, self.prediction, 
+                'clf prediction', parent)).place(x=230, y=345)
+        
+        self.pr_method = tk.StringVar(value='Decision Tree')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, 
+            values=['Decision Tree', 'Ridge', 'Random Forest', 'Support Vector', 'SGD',  
+                    'Nearest Neighbor', 'Gaussian Process', 'Multi-layer Perceptron',
+                    'XGBoost', 'CatBoost'])
+        self.combobox9.place(x=105,y=402)
+        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=400)
+
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=425)
+        self.place_result_var = tk.StringVar(value='End')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, 
+            width=10, values=['Start', 'End'])
+        self.combobox9.place(x=120,y=427)
+        
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=400)
+        self.pr_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.prediction.x_from_var, width=14, values=[])
+        self.pr_x_from_combobox.place(x=275, y=402)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=425)
+        self.pr_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.prediction.x_to_var, width=14, values=[])
+        self.pr_x_to_combobox.place(x=275, y=427)
         
         ttk.Button(self.frame, text='Predict classes', 
             command=lambda: 
@@ -1469,7 +1785,7 @@ class clf_mtds_specification:
         self.root.title('Classification methods specification')
 
         self.canvas = tk.Canvas(self.root)
-        self.frame = ttk.Frame(self.canvas, width=1280, height=640)
+        self.frame = ttk.Frame(self.canvas, width=1460, height=640)
         self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", 
             command=self.canvas.xview)
         self.canvas.configure(xscrollcommand=self.scrollbar.set)
@@ -1937,37 +2253,67 @@ class clf_mtds_specification:
         ttk.Label(self.frame, text='Use GPU', font=myfont2).place(x=1055, y=220)
         xgb_cb2 = ttk.Checkbutton(self.frame, variable=prev.xgbc_use_gpu, takefocus=False)
         xgb_cb2.place(x=1165, y=220)
+        ttk.Label(self.frame, text='Early Stopping', font=myfont2).place(x=1055, y=240)
+        xgb_cb3 = ttk.Checkbutton(self.frame, variable=prev.xgbc_early_stopping, takefocus=False)
+        xgb_cb3.place(x=1165, y=240)
+        ttk.Label(self.frame, text='n iter no change', font=myfont2).place(x=1055, y=260)
+        xgb_e10 = ttk.Entry(self.frame, textvariable=prev.xgbc_n_iter_no_change, font=myfont2, width=7)
+        xgb_e10.place(x=1165,y=260)
+        ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1055, y=280)
+        xgb_e11 = ttk.Entry(self.frame, textvariable=prev.xgbc_validation_fraction, font=myfont2, width=7)
+        xgb_e11.place(x=1165,y=280)
+        ttk.Label(self.frame, text='CV-voting mode', font=myfont2).place(x=1055, y=300)
+        xgb_cb4 = ttk.Checkbutton(self.frame, variable=prev.xgbc_cv_voting_mode, takefocus=False)
+        xgb_cb4.place(x=1165, y=300)
+        ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1055, y=320)
+        xgb_e12 = ttk.Entry(self.frame, textvariable=prev.xgbc_cv_voting_folds, font=myfont2, width=7)
+        xgb_e12.place(x=1165,y=320)
 
-        ttk.Label(self.frame, text='CatBoost', font=myfont_b).place(x=1085, y=250)
-        ttk.Label(self.frame, text='Iterations', font=myfont2).place(x=1055, y=280)
+        ttk.Label(self.frame, text='CatBoost', font=myfont_b).place(x=1265, y=10)
+        ttk.Label(self.frame, text='Iterations', font=myfont2).place(x=1235, y=40)
         cb_e1 = ttk.Entry(self.frame, textvariable=prev.cbc_iterations, font=myfont2, width=7)
-        cb_e1.place(x=1165,y=280)
-        ttk.Label(self.frame, text='Learning rate', font=myfont2).place(x=1055, y=300)
+        cb_e1.place(x=1345,y=40)
+        ttk.Label(self.frame, text='Learning rate', font=myfont2).place(x=1235, y=60)
         cb_e2 = ttk.Entry(self.frame, textvariable=prev.cbc_learning_rate, font=myfont2, width=7)
-        cb_e2.place(x=1165,y=300)
-        ttk.Label(self.frame, text='Depth', font=myfont2).place(x=1055, y=320)
+        cb_e2.place(x=1345,y=60)
+        ttk.Label(self.frame, text='Depth', font=myfont2).place(x=1235, y=80)
         cb_e3 = ttk.Entry(self.frame, textvariable=prev.cbc_depth, font=myfont2, width=7)
-        cb_e3.place(x=1165,y=320)
-        ttk.Label(self.frame, text='Lambda', font=myfont2).place(x=1055, y=340)
+        cb_e3.place(x=1345,y=80)
+        ttk.Label(self.frame, text='Lambda', font=myfont2).place(x=1235, y=100)
         cb_e4 = ttk.Entry(self.frame, textvariable=prev.cbc_reg_lambda, font=myfont2, width=7)
-        cb_e4.place(x=1165,y=340)
-        ttk.Label(self.frame, text='Subsample', font=myfont2).place(x=1055, y=360)
+        cb_e4.place(x=1345,y=100)
+        ttk.Label(self.frame, text='Subsample', font=myfont2).place(x=1235, y=120)
         cb_e5 = ttk.Entry(self.frame, textvariable=prev.cbc_subsample, font=myfont2, width=7)
-        cb_e5.place(x=1165,y=360)
-        ttk.Label(self.frame, text='Colsample bylevel', font=myfont2).place(x=1055, y=380)
+        cb_e5.place(x=1345,y=120)
+        ttk.Label(self.frame, text='Colsample bylevel', font=myfont2).place(x=1235, y=140)
         cb_e6 = ttk.Entry(self.frame, 
             textvariable=prev.cbc_colsample_bylevel, font=myfont2, width=7)
-        cb_e6.place(x=1165,y=380)
-        ttk.Label(self.frame, text='Random strength', font=myfont2).place(x=1055, y=400)
+        cb_e6.place(x=1345,y=140)
+        ttk.Label(self.frame, text='Random strength', font=myfont2).place(x=1235, y=160)
         cb_e7 = ttk.Entry(self.frame, 
             textvariable=prev.cbc_random_strength, font=myfont2, width=7)
-        cb_e7.place(x=1165,y=400)
-        ttk.Label(self.frame, text='Use GPU', font=myfont2).place(x=1055, y=420)
+        cb_e7.place(x=1345,y=160)
+        ttk.Label(self.frame, text='Use GPU', font=myfont2).place(x=1235, y=180)
         cb_cb2 = ttk.Checkbutton(self.frame, variable=prev.cbc_use_gpu, takefocus=False)
-        cb_cb2.place(x=1165, y=420)
-        ttk.Label(self.frame, text='cat_features list', font=myfont2).place(x=1055, y=440)
+        cb_cb2.place(x=1345, y=180)
+        ttk.Label(self.frame, text='cat_features list', font=myfont2).place(x=1235, y=200)
         cb_e8 = ttk.Entry(self.frame, textvariable=prev.cbc_cf_list, font=myfont2, width=10)
-        cb_e8.place(x=1160,y=440)
+        cb_e8.place(x=1340,y=200)
+        ttk.Label(self.frame, text='Early stopping', font=myfont2).place(x=1235, y=220)
+        cb_cb3 = ttk.Checkbutton(self.frame, variable=prev.cbc_early_stopping, takefocus=False)
+        cb_cb3.place(x=1345, y=220)
+        ttk.Label(self.frame, text='n iter no change', font=myfont2).place(x=1235, y=240)
+        cb_e9 = ttk.Entry(self.frame, textvariable=prev.cbc_n_iter_no_change, font=myfont2, width=7)
+        cb_e9.place(x=1345,y=240)
+        ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1235, y=260)
+        cb_e10 = ttk.Entry(self.frame, textvariable=prev.cbc_validation_fraction, font=myfont2, width=7)
+        cb_e10.place(x=1345,y=260)
+        ttk.Label(self.frame, text='CV-voting mode', font=myfont2).place(x=1235, y=280)
+        cb_cb4 = ttk.Checkbutton(self.frame, variable=prev.cbc_cv_voting_mode, takefocus=False)
+        cb_cb4.place(x=1345, y=280)
+        ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1235, y=300)
+        cb_e11 = ttk.Entry(self.frame, textvariable=prev.cbc_cv_voting_folds, font=myfont2, width=7)
+        cb_e11.place(x=1345,y=300)
 
         ttk.Button(self.root, text='OK', 
             command=lambda: quit_back(self.root, clf_app.root)).place(relx=0.85, rely=0.92)

@@ -313,7 +313,7 @@ class Table(Canvas):
             self.statusbar.grid(row=3,column=0, columnspan=2,sticky='ew')
             self.statusbar.grid_propagate(0)
 
-        f33 = Frame(self.parentframe, height=45)
+        f33 = Frame(self.parentframe, height=50)
         f33.grid(row=4)
         #self.redraw(callback=callback)
         self.currwidth = self.parentframe.winfo_width()
@@ -3600,14 +3600,21 @@ class Table(Canvas):
         if filename == None:
             filename = filedialog.askopenfilename(parent=self.master,
                                                           defaultextension='.csv',
-                                                          initialdir=self.importpath,
+                                                          # initialdir=self.importpath,
                                                           filetypes=[("csv","*.csv"),
                                                                      ("tsv","*.tsv"),
                                                                      ("txt","*.txt"),
+                                                                     ("xls","*.xls"),
+                                                                     ("xlsx","*.xlsx"),
+                                                                     ("data","*.data"),
                                                             ("All files","*.*")])
         if not filename:
             return
-        if dialog == True:
+        if filename.endswith('.xls') or filename.endswith('.xlsx'):
+            df = pd.read_excel(filename, **kwargs)
+        elif filename.endswith('.data'):
+            df = pd.read_table(filename, sep=',', **kwargs)
+        elif dialog == True:
             impdialog = ImportDialog(self, filename=filename)
             df = impdialog.df
             if df is None:
@@ -3626,7 +3633,7 @@ class Table(Canvas):
         if filename == None:
             filename = filedialog.askopenfilename(parent=self.master,
                                                           defaultextension='.xls',
-                                                          initialdir=os.getcwd(),
+                                                          # initialdir=os.getcwd(),
                                                           filetypes=[("xls","*.xls"),
                                                                      ("xlsx","*.xlsx"),
                                                             ("All files","*.*")])
@@ -3643,7 +3650,6 @@ class Table(Canvas):
         if filename == None:
             filename = filedialog.asksaveasfilename(parent=self.master,
                                                       defaultextension='.csv',
-                                                      initialdir = os.getcwd(),
                                                       filetypes=[("csv","*.csv"),
                                                            ("excel","*.xls"),
                                                            ("excel","*.xlsx"),
@@ -3672,14 +3678,11 @@ class ToolBar(Frame):
         Frame.__init__(self, parent, width=600, height=40)
         self.parentframe = parent
         self.parentapp = parentapp
-        img = images.open_proj()
-        addButton(self, 'Load table', self.parentapp.load, img, 'load table')
         img = images.save_proj()
-        addButton(self, 'Save', self.parentapp.save, img, 'save')
         addButton(self, 'Export', self.parentapp.doExport, img, 'export')
         img = images.importcsv()
         func = lambda: self.parentapp.importCSV(dialog=1)
-        addButton(self, 'Import', func, img, 'import csv')
+        addButton(self, 'Import', func, img, 'import')
         img = images.excel()
         addButton(self, 'Load excel', self.parentapp.loadExcel, img, 'load excel file')
         img = images.copy()
@@ -3696,8 +3699,8 @@ class ToolBar(Frame):
         # addButton(self, 'Pivot', self.parentapp.pivot, img, 'pivot')
         # img = images.melt()
         # addButton(self, 'Melt', self.parentapp.melt, img, 'melt')
-        # img = images.merge()
-        # addButton(self, 'Merge', self.parentapp.doCombine, img, 'merge, concat or join')
+        img = images.merge()
+        addButton(self, 'Merge', self.parentapp.doCombine, img, 'merge, concat or join')
         img = images.table_multiple()
         addButton(self, 'Table from selection', self.parentapp.tableFromSelection,
                     img, 'sub-table from selection')
@@ -3724,11 +3727,10 @@ class ChildToolBar(ToolBar):
         addButton(self, 'Load table', self.parentapp.load, img, 'load table')
         img = images.importcsv()
         func = lambda: self.parentapp.importCSV(dialog=1)
-        addButton(self, 'Import', func, img, 'import csv')
-        img = images.plot()
+        addButton(self, 'Import', func, img, 'import')
         img = images.save_proj()
         addButton(self, 'Export', self.parentapp.doExport, img, 'export')
-        img = images.importcsv()
+        img = images.plot()
         addButton(self, 'Plot', self.parentapp.plotSelected, img, 'plot selected')
         img = images.transpose()
         addButton(self, 'Transpose', self.parentapp.transpose, img, 'transpose')
@@ -3779,6 +3781,10 @@ class statusBar(Frame):
         addButton(fr, 'Zoom Out', self.parentapp.zoomOut, img, 'zoom out', side=LEFT, padding=1)
         img = images.zoom_in()
         addButton(fr, 'Zoom In', self.parentapp.zoomIn, img, 'zoom in', side=LEFT, padding=1)
+        img = images.open_proj()
+        addButton(fr1, 'Load table', self.parentapp.load, img, 'load table', side=LEFT, padding=1)
+        img = images.save_proj()
+        addButton(fr1, 'Save', self.parentapp.save, img, 'save', side=LEFT, padding=1)
         img = images.cross()
         addButton(fr1, 'Close', self.parentapp.remove, img, 'close', side=LEFT, padding=1)
         return

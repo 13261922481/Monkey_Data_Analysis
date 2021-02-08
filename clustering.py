@@ -1,7 +1,6 @@
 # Imports
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 import os
 import sys
 import numpy as np
@@ -20,7 +19,7 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # App to do clustering
-class cls_app:
+class clust_app:
     # sub-class for clustering-related data
     class clust:
         def __init__(self):
@@ -84,63 +83,20 @@ class cls_app:
             self.clust.pt = None
 
         #setting main window's parameters
-        w = 600
+        w = 620
         h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
-        cls_app.root = tk.Toplevel(parent)
-        cls_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        cls_app.root.title('Monkey Clustering')
-        cls_app.root.lift()
-        cls_app.root.tkraise()
-        cls_app.root.focus_force()
-        cls_app.root.resizable(False, False)
-        cls_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(cls_app.root, parent))
+        clust_app.root = tk.Toplevel(parent)
+        clust_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        clust_app.root.title('Monkey Clustering')
+        clust_app.root.lift()
+        clust_app.root.tkraise()
+        clust_app.root.focus_force()
+        clust_app.root.resizable(False, False)
+        clust_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(clust_app.root, parent))
 
         parent.iconify()
-        
-        self.frame = ttk.Frame(cls_app.root, width=w, height=h)
-        self.frame.place(x=0, y=0)
-
-        ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
-        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
-        e1.place(x=120, y=10)
-
-        ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, e1)).place(x=490, y=10)
-
-        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
-        training_sheet_entry = ttk.Entry(self.frame, 
-            textvariable=self.clust.sheet, font=myfont1, width=3)
-        training_sheet_entry.place(x=215,y=52)
-
-        ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.clust, e1, 'clust')).place(x=490, y=50)
-        
-        cb1 = ttk.Checkbutton(self.frame, text="header", 
-            variable=self.clust.header_var, takefocus=False)
-        cb1.place(x=10, y=50)
-
-        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
-        self.clust.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.clust.data_status.place(x=120, y=95)
-
-        ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.clust, 'clust', parent)).place(x=230, y=95)
-
-        ttk.Label(self.frame, text='Number of clusters:', font=myfont1).place(x=30, y=140)
-        self.n_clusters_var = tk.StringVar(value='2')
-        self.n_clusters_entry = ttk.Entry(self.frame, 
-            textvariable=self.n_clusters_var, font=myfont1, width=3)
-        self.n_clusters_entry.place(x=170, y=142)
-
-        ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: cls_mtds_specification(self, parent)).place(x=400, y=100)
-
-        self.elbow_metric = tk.StringVar(value='silhouette')
-        self.elbow_k_from = tk.StringVar(value='2')
-        self.elbow_k_to = tk.StringVar(value='11')
-        self.dendr_linkage = tk.StringVar(value='ward')
 
         # run elbow method
         def try_elbow_method(prev, main, parent):
@@ -149,9 +105,6 @@ class cls_app:
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
-        ttk.Button(self.frame, text='Elbow method', width=12, 
-            command=lambda: try_elbow_method(self, self.clust, parent)).place(x=400, y=140)
-
         # show dendrogram
         def try_show_dendrogram(prev, main, parent):
             try:
@@ -159,43 +112,12 @@ class cls_app:
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
-        ttk.Button(self.frame, text='Dendrogram', width=12, 
-            command=lambda: try_show_dendrogram(self, self.clust, parent)).place(x=400, y=180)
-
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
-        self.cls_x_from_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.clust.x_from_var, width=14, values=[])
-        self.cls_x_from_combobox.place(x=275, y=132)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
-        self.cls_x_to_combobox = ttk.Combobox(self.frame, 
-            textvariable=self.clust.x_to_var, width=14, values=[])
-        self.cls_x_to_combobox.place(x=275, y=157)
-
-        self.x_st_var = tk.StringVar(value='If needed')
-        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=180)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
-                                        values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=185)
-
-        self.dummies_var = tk.IntVar(value=0)
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
-            variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=185)
-
-        ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=230)
-        self.cls_method = tk.StringVar(value='K-Means')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.cls_method, width=15, 
-            values=['K-Means', 'Affinity Propagation', 'Mean Shift', 'Spectral clustering',
-                'Hierarchical clustering', 'DBSCAN', 'OPTICS', 'Birch'])
-        self.combobox9.place(x=150,y=232)
-
-        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=260)
-        self.place_result_var = tk.StringVar(value='End')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, width=10, 
-            values=['Start', 'End'])
-        self.combobox9.place(x=150,y=262)
-
         # methods parameters
+        self.elbow_metric = tk.StringVar(value='silhouette')
+        self.elbow_k_from = tk.StringVar(value='2')
+        self.elbow_k_to = tk.StringVar(value='11')
+        self.dendr_linkage = tk.StringVar(value='ward')
+
         self.kmeans_init = tk.StringVar(value='k-means++')
         self.kmeans_n_init = tk.StringVar(value='10')
         self.kmeans_max_iter = tk.StringVar(value='300')
@@ -266,7 +188,7 @@ class cls_app:
         self.bc_copy = tk.BooleanVar(value=True)
 
         # function to do clustering
-        def cls_predict_cluster(method):
+        def clust_predict_cluster(method):
             try:
                 x_from = self.clust.data.columns.get_loc(self.clust.x_from_var.get())
                 x_to = self.clust.data.columns.get_loc(self.clust.x_to_var.get()) + 1
@@ -425,24 +347,106 @@ class cls_app:
                 Data_Preview.root.lift()
             
         # run clustering
-        def try_cls_predict_cluster(method):
+        def try_clust_predict_cluster(method):
             try:
-                cls_predict_cluster(method)
+                clust_predict_cluster(method)
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
+        # Application interface
+
+        self.bg_frame = ttk.Frame(clust_app.root, width=10, height=h)
+        self.bg_frame.place(x=0, y=0)
+
+        self.frame = ttk.Frame(clust_app.root, width=w, height=h)
+        self.frame.place(x=10, y=0)
+
+        ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
+        e1 = ttk.Entry(self.frame, font=myfont1, width=40)
+        e1.place(x=120, y=10)
+
+        ttk.Button(self.frame, text='Choose file', 
+            command=lambda: open_file(self, e1)).place(x=490, y=10)
+
+        ttk.Label(self.frame, text='List number:').place(x=120,y=50)
+        training_sheet_entry = ttk.Entry(self.frame, 
+            textvariable=self.clust.sheet, font=myfont1, width=3)
+        training_sheet_entry.place(x=215,y=52)
+
+        ttk.Button(self.frame, text='Load data ', 
+            command=lambda: load_data(self, self.clust, e1, 'clust')).place(x=490, y=50)
+        
+        cb1 = ttk.Checkbutton(self.frame, text="header", 
+            variable=self.clust.header_var, takefocus=False)
+        cb1.place(x=10, y=50)
+
+        ttk.Label(self.frame, text='Data status:').place(x=10, y=95)
+        self.clust.data_status = ttk.Label(self.frame, text='Not Loaded')
+        self.clust.data_status.place(x=120, y=95)
+
+        ttk.Button(self.frame, text='View/Change', 
+            command=lambda: Data_Preview(self, self.clust, 'clust', parent)).place(x=230, y=95)
+
+        ttk.Label(self.frame, text='Number of clusters:', font=myfont1).place(x=30, y=140)
+        self.n_clusters_var = tk.StringVar(value='2')
+        self.n_clusters_entry = ttk.Entry(self.frame, 
+            textvariable=self.n_clusters_var, font=myfont1, width=3)
+        self.n_clusters_entry.place(x=170, y=142)
+
+        ttk.Button(self.frame, text="Methods' specifications", 
+                  command=lambda: clust_mtds_specification(self, parent)).place(x=400, y=100)
+
+        ttk.Button(self.frame, text='Elbow method', width=12, 
+            command=lambda: try_elbow_method(self, self.clust, parent)).place(x=400, y=140)
+
+        ttk.Button(self.frame, text='Dendrogram', width=12, 
+            command=lambda: try_show_dendrogram(self, self.clust, parent)).place(x=400, y=180)
+
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
+        self.clust_x_from_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.clust.x_from_var, width=14, values=[])
+        self.clust_x_from_combobox.place(x=275, y=132)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=155)
+        self.clust_x_to_combobox = ttk.Combobox(self.frame, 
+            textvariable=self.clust.x_to_var, width=14, values=[])
+        self.clust_x_to_combobox.place(x=275, y=157)
+
+        self.x_st_var = tk.StringVar(value='If needed')
+        ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=180)
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
+                                        values=['No', 'If needed', 'Yes'])
+        self.combobox2.place(x=150,y=185)
+
+        self.dummies_var = tk.IntVar(value=0)
+        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
+            variable=self.dummies_var, takefocus=False)
+        cb2.place(x=270, y=185)
+
+        ttk.Label(self.frame, text='Choose method', font=myfont1).place(x=30, y=230)
+        self.clust_method = tk.StringVar(value='K-Means')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.clust_method, width=15, 
+            values=['K-Means', 'Affinity Propagation', 'Mean Shift', 'Spectral clustering',
+                'Hierarchical clustering', 'DBSCAN', 'OPTICS', 'Birch'])
+        self.combobox9.place(x=150,y=232)
+
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=260)
+        self.place_result_var = tk.StringVar(value='End')
+        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, width=10, 
+            values=['Start', 'End'])
+        self.combobox9.place(x=150,y=262)
+
         ttk.Button(self.frame, text='Predict clusters', 
             command=lambda: 
-                try_cls_predict_cluster(method=self.cls_method.get())).place(x=400, y=230)
+                try_clust_predict_cluster(method=self.clust_method.get())).place(x=400, y=230)
 
         ttk.Button(self.frame, text='Save results', 
             command=lambda: save_results(self, self.clust, 'clust result')).place(x=400, y=270)
 
         ttk.Button(self.frame, text='Quit', 
-                  command=lambda: quit_back(cls_app.root, parent)).place(x=400, y=310)
+                  command=lambda: quit_back(clust_app.root, parent)).place(x=400, y=310)
 
 # sub-app for methods' specifications
-class cls_mtds_specification:
+class clust_mtds_specification:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
@@ -702,7 +706,7 @@ class cls_mtds_specification:
         bc_cb2.place(x=495, y=580)
 
         ttk.Button(self.root, text='OK', 
-            command=lambda: quit_back(self.root, cls_app.root)).place(relx=0.85, rely=0.92)
+            command=lambda: quit_back(self.root, clust_app.root)).place(relx=0.85, rely=0.92)
 
     # function to restore default parameters
     def restore_defaults(self, prev):
