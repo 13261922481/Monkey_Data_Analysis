@@ -1,6 +1,7 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from threading import Thread
 import os
 import sys
@@ -9,7 +10,7 @@ import webbrowser
 import pandas as pd
 import sklearn
 from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results, open_sql
+from utils import *
 
 # fonts
 myfont = (None, 13)
@@ -139,7 +140,7 @@ class clf_app:
             self.combobox1 = ttk.Combobox(self.frame, textvariable=self.method_to_grid, width=15, 
                 values=['Decision Tree', 'Ridge', 'Random Forest', 'Support Vector', 'SGD',  
                         'Nearest Neighbor', 'Gaussian Process', 'Multi-layer Perceptron',
-                        'XGBoost', 'CatBoost'])
+                        'XGBoost', 'CatBoost', 'LightGBM'])
             self.combobox1.place(x=110,y=12)
 
             ttk.Label(self.frame, text='n jobs', font=myfont1).place(x=250, y=10)
@@ -313,6 +314,15 @@ class clf_app:
                         gc = GridSearchCV(estimator=CatBoostClassifier(), 
                             param_grid=eval(param_grid_entry.get("1.0",'end')), 
                             cv=folds, n_jobs=int(n_jobs_entry.get()))
+                        if prev.x_st_var.get() == 'Yes':
+                            gc.fit(prev.X_St, prev.y)
+                        else:
+                            gc.fit(prev.X, prev.y)
+                    elif method == 'LightGBM':
+                        from lightgbm import LGBMClassifier
+                        gc = GridSearchCV(estimator=LGBMClassifier(), 
+                            param_grid=eval(param_grid_entry.get("1.0",'end')), 
+                            cv=folds, n_jobs=int(n_jobs_entry.get()), verbose=3)
                         if prev.x_st_var.get() == 'Yes':
                             gc.fit(prev.X_St, prev.y)
                         else:
@@ -551,6 +561,31 @@ class clf_app:
         self.cbc_cv_voting_mode = tk.BooleanVar(value=False)
         self.cbc_cv_voting_folds = tk.StringVar(value='5')
 
+        self.lgbmc_include_comp = tk.BooleanVar(value=True)
+        self.lgbmc_boosting_type = tk.StringVar(value='gbdt')
+        self.lgbmc_num_leaves = tk.StringVar(value='31')
+        self.lgbmc_max_depth = tk.StringVar(value='-1')
+        self.lgbmc_learning_rate = tk.StringVar(value='0.1')
+        self.lgbmc_n_estimators = tk.StringVar(value='100')
+        self.lgbmc_subsample_for_bin = tk.StringVar(value='200000')
+        self.lgbmc_min_split_gain = tk.StringVar(value='0.0')
+        self.lgbmc_min_child_weight = tk.StringVar(value='1e-3')
+        self.lgbmc_min_child_samples = tk.StringVar(value='20')
+        self.lgbmc_subsample = tk.StringVar(value='1.0')
+        self.lgbmc_subsample_freq = tk.StringVar(value='0')
+        self.lgbmc_colsample_bytree = tk.StringVar(value='1.0')
+        self.lgbmc_reg_alpha = tk.StringVar(value='0.0')
+        self.lgbmc_reg_lambda = tk.StringVar(value='0.0')
+        self.lgbmc_n_jobs = tk.StringVar(value='-1')
+        self.lgbmc_silent = tk.BooleanVar(value=True)
+        self.lgbmc_categorical_feature = tk.StringVar(value='auto')
+        self.lgbmc_eval_metric = tk.StringVar(value='rmse')
+        self.lgbmc_early_stopping = tk.BooleanVar(value=False)
+        self.lgbmc_n_iter_no_change = tk.StringVar(value='100')
+        self.lgbmc_validation_fraction = tk.StringVar(value='0.2')
+        self.lgbmc_cv_voting_mode = tk.BooleanVar(value=False)
+        self.lgbmc_cv_voting_folds = tk.StringVar(value='5')
+
         # flag for stopping comparison
         self.continue_flag = True
 
@@ -570,6 +605,9 @@ class clf_app:
                     except:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[int(self.y_var.get())]
+
+                    prev.X[prev.X.select_dtypes(['object']).columns] = \
+                        prev.X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
                 elif self.handle_cat_var.get()=='Dummies':
                     from sklearn.preprocessing import OneHotEncoder
                     enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
@@ -1061,6 +1099,91 @@ class clf_app:
                                     cross_val_score(cbc, prev.X, prev.y, cv=fold))
                                 self.pb1.step(1)
                     self.scores['cbc'] = cbc_scores.mean()
+                # LightGBM
+                if self.lgbmc_include_comp.get() and self.continue_flag:
+                    from lightgbm import LGBMClassifier
+                    lgbmc = LGBMClassifier(
+                        boosting_type=self.lgbmc_boosting_type.get(),
+                        num_leaves=int(self.lgbmc_num_leaves.get()),
+                        max_depth=int(self.lgbmc_max_depth.get()),
+                        learning_rate=float(self.lgbmc_learning_rate.get()),
+                        n_estimators=int(self.lgbmc_n_estimators.get()),
+                        subsample_for_bin=int(self.lgbmc_subsample_for_bin.get()),
+                        min_split_gain=float(self.lgbmc_min_split_gain.get()),
+                        min_child_weight=float(self.lgbmc_min_child_weight.get()),
+                        min_child_samples=int(self.lgbmc_min_child_samples.get()),
+                        subsample=float(self.lgbmc_subsample.get()),
+                        subsample_freq=int(self.lgbmc_subsample_freq.get()),
+                        colsample_bytree=float(self.lgbmc_colsample_bytree.get()),
+                        reg_alpha=float(self.lgbmc_reg_alpha.get()),
+                        reg_lambda=float(self.lgbmc_reg_lambda.get()),
+                        n_jobs=int(self.lgbmc_n_jobs.get()),
+                        silent=self.lgbmc_silent.get(),
+                    )
+                    lgbmc_scores = np.array([])
+                    if self.x_st_var.get() == 'Yes' and self.lgbmc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X_St, check_val_X_St, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X_St[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbr_validation_fraction.get()), random_state=22)
+                                    lgbmc.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y),
+                                        early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmc_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X_St[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmc_scores = np.append(lgbmc_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    elif self.lgbmc_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X, check_val_X, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X.iloc[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbr_validation_fraction.get()), random_state=22)
+                                    lgbmc.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y),
+                                        early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmc_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X.iloc[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmc_scores = np.append(lgbmc_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    elif self.x_st_var.get() == 'Yes' and self.lgbmc_early_stopping.get()==False:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    lgbmc.fit(
+                                        prev.X_St[train_index], prev.y[train_index],
+                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmc_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X_St[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmc_scores = np.append(lgbmc_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    else:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X):
+                                if self.continue_flag:
+                                    lgbmc.fit(
+                                        prev.X.iloc[train_index], prev.y[train_index],
+                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmc_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X.iloc[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmc_scores = np.append(lgbmc_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    self.scores['lgbmc'] = lgbmc_scores.mean()
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -1088,7 +1211,8 @@ class clf_app:
                           self.rfc_include_comp.get(), self.svc_include_comp.get(),
                           self.sgdc_include_comp.get(), self.knc_include_comp.get(),
                           self.gpc_include_comp.get(), self.mlpc_include_comp.get(),
-                          self.xgbc_include_comp.get(), self.cbc_include_comp.get(),]:
+                          self.xgbc_include_comp.get(), self.cbc_include_comp.get(),
+                          self.lgbmc_include_comp.get(),]:
                     if x==True:
                         l+=1*int(rep_entry.get())
 
@@ -1127,6 +1251,11 @@ class clf_app:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[int(self.y_var.get())]
                     X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+
+                    X[X.select_dtypes(['object']).columns] = \
+                        X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
+                    training_X[training_X.select_dtypes(['object']).columns] = \
+                        training_X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
                 elif self.handle_cat_var.get()=='Dummies':
                     from sklearn.preprocessing import OneHotEncoder
                     enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
@@ -1579,6 +1708,112 @@ class clf_app:
                         cbc.fit(training_X, training_y)
                         pr_values = cbc.predict(X)
 
+                # LightGBM
+                if method == 'LightGBM':
+                    from lightgbm import LGBMClassifier
+                    lgbmc = LGBMClassifier(
+                        boosting_type=self.lgbmc_boosting_type.get(),
+                        num_leaves=int(self.lgbmc_num_leaves.get()),
+                        max_depth=int(self.lgbmc_max_depth.get()),
+                        learning_rate=float(self.lgbmc_learning_rate.get()),
+                        n_estimators=int(self.lgbmc_n_estimators.get()),
+                        subsample_for_bin=int(self.lgbmc_subsample_for_bin.get()),
+                        min_split_gain=float(self.lgbmc_min_split_gain.get()),
+                        min_child_weight=float(self.lgbmc_min_child_weight.get()),
+                        min_child_samples=int(self.lgbmc_min_child_samples.get()),
+                        subsample=float(self.lgbmc_subsample.get()),
+                        subsample_freq=int(self.lgbmc_subsample_freq.get()),
+                        colsample_bytree=float(self.lgbmc_colsample_bytree.get()),
+                        reg_alpha=float(self.lgbmc_reg_alpha.get()),
+                        reg_lambda=float(self.lgbmc_reg_lambda.get()),
+                        n_jobs=int(self.lgbmc_n_jobs.get()),
+                        silent=self.lgbmc_silent.get(),
+                    )
+                    #cv-voting mode
+                    if self.x_st_var.get() == 'Yes' and self.lgbmc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.lgbmc_cv_voting_folds.get()), 
+                            shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X_St):
+                            lgbmc.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X_St.iloc[test_index], training_y[test_index])], 
+                                early_stopping_rounds=int(self.lgbmc_n_iter_no_change.get()),
+                                categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                    else eval(self.lgbmc_categorical_feature.get()))
+                            )
+                            # best_iteration = lgbmc.get_booster().best_ntree_limit
+                            # azaza.append(lgbmc.best_score_['l2'].items()[0])
+                            # print(azaza)
+                            predict = lgbmc.predict(X_St)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+                        # print(np.mean(azaza))
+                    elif self.lgbmc_cv_voting_mode.get()==True:
+                        from scipy.stats import mode
+                        first_col = True
+                        cross_fold = KFold(n_splits = int(self.lgbmc_cv_voting_folds.get()), 
+                            shuffle=True)
+                        azaza = []
+                        for train_index, test_index in cross_fold.split(training_X):
+                            lgbmc.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
+                                eval_set=[(training_X.iloc[test_index], training_y[test_index])],
+                                early_stopping_rounds=int(self.lgbmc_n_iter_no_change.get()),
+                                categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                    else eval(self.lgbmc_categorical_feature.get()))
+                            )
+                            # best_iteration = lgbmc.get_booster().best_ntree_limit
+                            # azaza.append(lgbmc.best_score_['l2'].items()[0])
+                            # print(azaza)
+                            predict = lgbmc.predict(X)
+                            if first_col:
+                                pr_values = np.array(predict, ndmin=2)
+                                pr_values = np.transpose(pr_values)
+                                first_col = False
+                            else:
+                                pr_values = np.insert(pr_values, -1, predict, axis=1)
+                        pr_values= mode(pr_values, axis=1)[0]
+
+                    # early-stopping mode
+                    elif self.x_st_var.get() == 'Yes' and self.lgbmc_early_stopping.get()==True:
+                        lgbmc.fit(
+                            X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y), 
+                            early_stopping_rounds=int(self.lgbmc_n_iter_no_change.get()),
+                            categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                else eval(self.lgbmc_categorical_feature.get()))
+                        )
+                        pr_values = lgbmc.predict(X_St)
+                    elif self.lgbmc_early_stopping.get()==True:
+                        lgbmc.fit(
+                            X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y), 
+                            early_stopping_rounds=int(self.lgbmc_n_iter_no_change.get()),
+                            categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                else eval(self.lgbmc_categorical_feature.get()))
+                        )
+                        pr_values = lgbmc.predict(X)
+                    # standard mode
+                    elif self.x_st_var.get() == 'Yes':
+                        lgbmc.fit(
+                            training_X_St, training_y,
+                            categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                else eval(self.lgbmc_categorical_feature.get()))
+                        )
+                        pr_values = lgbmc.predict(X_St)
+                    else:
+                        lgbmc.fit(
+                            training_X, training_y,
+                            categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
+                                else eval(self.lgbmc_categorical_feature.get()))
+                        )
+                        pr_values = lgbmc.predict(X)
+
+                self.prediction.data = self.prediction.data.drop('Class', axis = 1, errors='ignore')
                 if self.place_result_var.get() == 'Start':
                     self.prediction.data.insert(0, 'Class', pr_values)
                 elif self.place_result_var.get() == 'End':
@@ -1613,7 +1848,7 @@ class clf_app:
                     if hasattr(self, 'pb2'):
                         self.pb2.destroy()
                     self.pb2 = ttk.Progressbar(self.frame, mode='indeterminate', length=100)
-                    self.pb2.place(x=425, y=330)
+                    self.pb2.place(x=405, y=360)
                     self.pb2.start(10)
 
                     thread1 = Thread(target=clf_predict_class, args=(self.pr_method.get(),))
@@ -1685,89 +1920,87 @@ class clf_app:
 
         self.x_st_var = tk.StringVar(value='If needed')
         ttk.Label(self.frame, text='X Standartization', font=myfont1).place(x=30, y=175)
-        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=10,
+        self.combobox2 = ttk.Combobox(self.frame, textvariable=self.x_st_var, width=12,
                                         values=['No', 'If needed', 'Yes'])
-        self.combobox2.place(x=150,y=180)
+        self.combobox2.place(x=160,y=180)
 
-        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=205)
+        ttk.Label(self.frame, text='Handle categorical', font=myfont1).place(x=30, y=205)
+        self.handle_cat_var = tk.StringVar(value='No')
+        self.handle_cat_combobox = ttk.Combobox(self.frame, textvariable=self.handle_cat_var, width=12,
+                                        values=['No', 'Dummies', 'One Hot Encoding', 'Ordinal Encoding'])
+        self.handle_cat_combobox.place(x=160,y=208)
+
+        ttk.Label(self.frame, text='Number of folds:', font=myfont1).place(x=30, y=235)
         e2 = ttk.Entry(self.frame, font=myfont1, width=4)
-        e2.place(x=150, y=207)
+        e2.place(x=150, y=237)
         e2.insert(0, "5")
 
-        self.dummies_var = tk.IntVar(value=0)
-        cb2 = ttk.Checkbutton(self.frame, text="Dummies", 
-            variable=self.dummies_var, takefocus=False)
-        cb2.place(x=270, y=182)
-
-        # self.onehot_var = tk.IntVar(value=0)
-        # onehot_cb = ttk.Checkbutton(self.frame, text="One-Hot Encoding", 
-        #     variable=self.onehot_var, takefocus=False)
-        # onehot_cb.place(x=270, y=182)
-
-        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=205)
+        ttk.Label(self.frame, text='Number of repeats:', font=myfont1).place(x=200, y=235)
         rep_entry = ttk.Entry(self.frame, font=myfont1, width=4)
-        rep_entry.place(x=330, y=208)
+        rep_entry.place(x=330, y=238)
         rep_entry.insert(0, "1")
-        
-        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=250)
+
+        ttk.Label(self.frame, text='Predict Data file:', font=myfont1).place(x=10, y=280)
         pr_data_entry = ttk.Entry(self.frame, font=myfont1, width=38)
-        pr_data_entry.place(x=140, y=250)
+        pr_data_entry.place(x=140, y=280)
         
         ttk.Button(self.frame, text='Choose file', 
-            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=250)
+            command=lambda: open_file(self, pr_data_entry)).place(x=490, y=280)
         
-        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=295)
+        ttk.Label(self.frame, text='List number:', font=myfont1).place(x=120,y=325)
         pr_sheet_entry = ttk.Entry(self.frame, 
             textvariable=self.prediction.sheet, font=myfont1, width=3)
-        pr_sheet_entry.place(x=215,y=297)
+        pr_sheet_entry.place(x=215,y=327)
         
         ttk.Button(self.frame, text='Load data ', 
-            command=lambda: load_data(self, self.prediction, 
-                pr_data_entry, 'clf prediction')).place(x=490, y=290)
+            command=lambda: load_data(self, self.prediction, pr_data_entry, 
+                'rgr prediction')).place(x=490, y=320)
         
         cb4 = ttk.Checkbutton(self.frame, text="header", 
             variable=self.prediction.header_var, takefocus=False)
-        cb4.place(x=10, y=290)
+        cb4.place(x=10, y=320)
         
-        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=345)
-        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded')
-        self.prediction.data_status.place(x=120, y=345)
+        ttk.Label(self.frame, text='Data status:', font=myfont).place(x=10, y=385)
+        self.prediction.data_status = ttk.Label(self.frame, text='Not Loaded', font=myfont)
+        self.prediction.data_status.place(x=120, y=385)
 
         ttk.Button(self.frame, text='View/Change', command=lambda: 
             Data_Preview(self, self.prediction, 
-                'clf prediction', parent)).place(x=230, y=345)
+                'rgr prediction', parent)).place(x=230, y=375)
         
         self.pr_method = tk.StringVar(value='Decision Tree')
         self.combobox9 = ttk.Combobox(self.frame, textvariable=self.pr_method, width=15, 
             values=['Decision Tree', 'Ridge', 'Random Forest', 'Support Vector', 'SGD',  
                     'Nearest Neighbor', 'Gaussian Process', 'Multi-layer Perceptron',
-                    'XGBoost', 'CatBoost'])
-        self.combobox9.place(x=105,y=402)
-        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=400)
+                    'XGBoost', 'CatBoost', 'LightGBM'])
+        self.combobox9.place(x=105,y=422)
+        ttk.Label(self.frame, text='Method', font=myfont1).place(x=30, y=420)
 
-        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=425)
+        ttk.Label(self.frame, text='Place result', font=myfont1).place(x=30, y=445)
         self.place_result_var = tk.StringVar(value='End')
-        self.combobox9 = ttk.Combobox(self.frame, textvariable=self.place_result_var, 
-            width=10, values=['Start', 'End'])
-        self.combobox9.place(x=120,y=427)
+        self.combobox9 = ttk.Combobox(self.frame, 
+            textvariable=self.place_result_var, width=10, values=['Start', 'End'])
+        self.combobox9.place(x=120,y=447)
         
-        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=400)
+        ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=420)
         self.pr_x_from_combobox = ttk.Combobox(self.frame, 
             textvariable=self.prediction.x_from_var, width=14, values=[])
-        self.pr_x_from_combobox.place(x=275, y=402)
-        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=425)
+        self.pr_x_from_combobox.place(x=275, y=422)
+        ttk.Label(self.frame, text='to', font=myfont1).place(x=225, y=445)
         self.pr_x_to_combobox = ttk.Combobox(self.frame, 
             textvariable=self.prediction.x_to_var, width=14, values=[])
-        self.pr_x_to_combobox.place(x=275, y=427)
+        self.pr_x_to_combobox.place(x=275, y=447)
         
-        ttk.Button(self.frame, text='Predict classes', 
+        ttk.Button(self.frame, text='Predict', width=7,
             command=lambda: 
-                try_clf_predict_class(method=self.pr_method.get())).place(x=420, y=360)
+                try_clf_predict_class(method=self.pr_method.get())).place(x=400, y=395)
+        ttk.Button(self.frame, text='Quit', width=7,
+            command=lambda: quit_back(clf_app.root, parent)).place(x=400, y=430)
         
-        ttk.Button(self.frame, text='Save results', 
-            command=lambda: save_results(self, self.prediction, 'clf result')).place(x=420, y=400)
-        ttk.Button(self.frame, text='Quit', 
-            command=lambda: quit_back(clf_app.root, parent)).place(x=420, y=440)
+        ttk.Button(self.frame, text='Save to file', width=9,
+            command=lambda: save_results(self, self.prediction, 'clf result')).place(x=500, y=395)
+        ttk.Button(self.frame, text='Save to sql', width=9,
+            command=lambda: save_to_sql(self, self.prediction, 'clf_result')).place(x=500, y=430)
 
 # sub-app for methods' specifications    
 class clf_mtds_specification:
@@ -1785,7 +2018,7 @@ class clf_mtds_specification:
         self.root.title('Classification methods specification')
 
         self.canvas = tk.Canvas(self.root)
-        self.frame = ttk.Frame(self.canvas, width=1460, height=640)
+        self.frame = ttk.Frame(self.canvas, width=1640, height=640)
         self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", 
             command=self.canvas.xview)
         self.canvas.configure(xscrollcommand=self.scrollbar.set)
@@ -1814,7 +2047,11 @@ class clf_mtds_specification:
         settings_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         settings_menu.add_command(label='Restore Defaults', 
-            command=lambda: self.restore_defaults(prev))
+            command=lambda: self.restore_defaults(prev, parent))
+        settings_menu.add_command(label='Save settings', 
+            command=lambda: self.save_settings(prev, parent))
+        settings_menu.add_command(label='Load settings', 
+            command=lambda: self.load_settings(prev, parent))
 
         ttk.Label(self.frame, text=' Include in\nComparison', font=myfont_b).place(x=30, y=10)
         ttk.Label(self.frame, text='Decision Tree', font=myfont2).place(x=5, y=60)
@@ -2315,158 +2552,469 @@ class clf_mtds_specification:
         cb_e11 = ttk.Entry(self.frame, textvariable=prev.cbc_cv_voting_folds, font=myfont2, width=7)
         cb_e11.place(x=1345,y=300)
 
+        ttk.Label(self.frame, text='LightGBM', font=myfont_b).place(x=1445, y=10)
+        ttk.Label(self.frame, text='Boosting type', font=myfont2).place(x=1415, y=40)
+        lgb_combobox1 = ttk.Combobox(self.frame, textvariable=prev.lgbmc_boosting_type, width=7, 
+            values=['gbdt', 'dart', 'goss', 'rf'])
+        lgb_combobox1.place(x=1525,y=40)
+        ttk.Label(self.frame, text='Num leaves', font=myfont2).place(x=1415, y=60)
+        lgb_e1 = ttk.Entry(self.frame, textvariable=prev.lgbmc_num_leaves, font=myfont2, width=7)
+        lgb_e1.place(x=1525,y=60)
+        ttk.Label(self.frame, text='Max depth', font=myfont2).place(x=1415, y=80)
+        lgb_e2 = ttk.Entry(self.frame, textvariable=prev.lgbmc_max_depth, font=myfont2, width=7)
+        lgb_e2.place(x=1525,y=80)
+        ttk.Label(self.frame, text='Learning rate', font=myfont2).place(x=1415, y=100)
+        lgb_e3 = ttk.Entry(self.frame, textvariable=prev.lgbmc_learning_rate, font=myfont2, width=7)
+        lgb_e3.place(x=1525,y=100)
+        ttk.Label(self.frame, text='Iterations', font=myfont2).place(x=1415, y=120)
+        lgb_e4 = ttk.Entry(self.frame, textvariable=prev.lgbmc_n_estimators, font=myfont2, width=7)
+        lgb_e4.place(x=1525,y=120)
+        ttk.Label(self.frame, text='Subsample for bin', font=myfont2).place(x=1415, y=140)
+        lgb_e5 = ttk.Entry(self.frame, textvariable=prev.lgbmc_subsample_for_bin, font=myfont2, width=7)
+        lgb_e5.place(x=1525,y=140)
+        ttk.Label(self.frame, text='Min split gain', font=myfont2).place(x=1415, y=160)
+        lgb_e6 = ttk.Entry(self.frame, textvariable=prev.lgbmc_min_split_gain, font=myfont2, width=7)
+        lgb_e6.place(x=1525,y=160)
+        ttk.Label(self.frame, text='Min child weight', font=myfont2).place(x=1415, y=180)
+        lgb_e7 = ttk.Entry(self.frame, textvariable=prev.lgbmc_min_child_weight, font=myfont2, width=7)
+        lgb_e7.place(x=1525,y=180)
+        ttk.Label(self.frame, text='Min child samples', font=myfont2).place(x=1415, y=200)
+        lgb_e8 = ttk.Entry(self.frame, textvariable=prev.lgbmc_min_child_samples, font=myfont2, width=7)
+        lgb_e8.place(x=1525,y=200)
+        ttk.Label(self.frame, text='Subsample', font=myfont2).place(x=1415, y=220)
+        lgb_e9 = ttk.Entry(self.frame, textvariable=prev.lgbmc_subsample, font=myfont2, width=7)
+        lgb_e9.place(x=1525,y=220)
+        ttk.Label(self.frame, text='Subsample freq', font=myfont2).place(x=1415, y=240)
+        lgb_e10 = ttk.Entry(self.frame, textvariable=prev.lgbmc_subsample_freq, font=myfont2, width=7)
+        lgb_e10.place(x=1525,y=240)
+        ttk.Label(self.frame, text='Colsample bytree', font=myfont2).place(x=1415, y=260)
+        lgb_e11 = ttk.Entry(self.frame, textvariable=prev.lgbmc_colsample_bytree, font=myfont2, width=7)
+        lgb_e11.place(x=1525,y=260)
+        ttk.Label(self.frame, text='Reg alpha', font=myfont2).place(x=1415, y=280)
+        lgb_e12 = ttk.Entry(self.frame, textvariable=prev.lgbmc_reg_alpha, font=myfont2, width=7)
+        lgb_e12.place(x=1525,y=280)
+        ttk.Label(self.frame, text='Reg lambda', font=myfont2).place(x=1415, y=300)
+        lgb_e13 = ttk.Entry(self.frame, textvariable=prev.lgbmc_reg_lambda, font=myfont2, width=7)
+        lgb_e13.place(x=1525,y=300)
+        ttk.Label(self.frame, text='n jobs', font=myfont2).place(x=1415, y=320)
+        lgb_e14 = ttk.Entry(self.frame, textvariable=prev.lgbmc_n_jobs, font=myfont2, width=7)
+        lgb_e14.place(x=1525,y=320)
+        ttk.Label(self.frame, text='silent', font=myfont2).place(x=1415, y=340)
+        lgb_cb1 = ttk.Checkbutton(self.frame, variable=prev.lgbmc_silent, takefocus=False)
+        lgb_cb1.place(x=1525, y=340)
+        ttk.Label(self.frame, text='cat_features list', font=myfont2).place(x=1415, y=360)
+        lgb_e15 = ttk.Entry(self.frame, textvariable=prev.lgbmc_categorical_feature, font=myfont2, width=9)
+        lgb_e15.place(x=1520,y=360)
+        ttk.Label(self.frame, text='Early stopping', font=myfont2).place(x=1415, y=380)
+        lgb_cb2 = ttk.Checkbutton(self.frame, variable=prev.lgbmc_early_stopping, takefocus=False)
+        lgb_cb2.place(x=1525, y=380)
+        ttk.Label(self.frame, text='n iter no change', font=myfont2).place(x=1415, y=400)
+        lgb_e16 = ttk.Entry(self.frame, textvariable=prev.lgbmc_n_iter_no_change, font=myfont2, width=7)
+        lgb_e16.place(x=1525,y=400)
+        ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1415, y=420)
+        lgb_e17 = ttk.Entry(self.frame, textvariable=prev.lgbmc_validation_fraction, font=myfont2, width=7)
+        lgb_e17.place(x=1525,y=420)
+        ttk.Label(self.frame, text='CV-avg mode', font=myfont2).place(x=1415, y=440)
+        lgb_cb3 = ttk.Checkbutton(self.frame, variable=prev.lgbmc_cv_voting_mode, takefocus=False)
+        lgb_cb3.place(x=1525, y=440)
+        ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1415, y=460)
+        lgb_e18 = ttk.Entry(self.frame, textvariable=prev.lgbmc_cv_voting_folds, font=myfont2, width=7)
+        lgb_e18.place(x=1525,y=460)
+
         ttk.Button(self.root, text='OK', 
             command=lambda: quit_back(self.root, clf_app.root)).place(relx=0.85, rely=0.92)
 
         self.root.lift()
 
     # function to restore default parameters
-    def restore_defaults(self, prev):
-        #methods parameters
-        prev.rc_include_comp = tk.BooleanVar(value=True)
-        prev.rc_alpha = tk.StringVar(value='1.0')
-        prev.rc_fit_intercept = tk.BooleanVar(value=True)
-        prev.rc_normalize = tk.BooleanVar(value=False)
-        prev.rc_copy_X = tk.BooleanVar(value=True)
-        prev.rc_max_iter = tk.StringVar(value='None')
-        prev.rc_tol = tk.StringVar(value='1e-3')
-        prev.rc_solver = tk.StringVar(value='auto')
-        prev.rc_random_state = tk.StringVar(value='None')
-        
-        prev.dtc_include_comp = tk.BooleanVar(value=True)
-        prev.dtc_criterion = tk.StringVar(value='gini')
-        prev.dtc_splitter = tk.StringVar(value='best')
-        prev.dtc_max_depth = tk.StringVar(value='None')
-        prev.dtc_min_samples_split = tk.StringVar(value='2')
-        prev.dtc_min_samples_leaf = tk.StringVar(value='1')
-        prev.dtc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
-        prev.dtc_max_features = tk.StringVar(value='None')
-        prev.dtc_random_state = tk.StringVar(value='None')
-        prev.dtc_max_leaf_nodes = tk.StringVar(value='None')
-        prev.dtc_min_impurity_decrease = tk.StringVar(value='0.0')
-        prev.dtc_ccp_alpha = tk.StringVar(value='0.0')
-        
-        prev.rfc_include_comp = tk.BooleanVar(value=True)
-        prev.rfc_n_estimators = tk.StringVar(value='100')
-        prev.rfc_criterion = tk.StringVar(value='gini')
-        prev.rfc_max_depth = tk.StringVar(value='None')
-        prev.rfc_min_samples_split = tk.StringVar(value='2')
-        prev.rfc_min_samples_leaf = tk.StringVar(value='1')
-        prev.rfc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
-        prev.rfc_max_features = tk.StringVar(value='auto')
-        prev.rfc_max_leaf_nodes = tk.StringVar(value='None')
-        prev.rfc_min_impurity_decrease = tk.StringVar(value='0.0')
-        prev.rfc_bootstrap = tk.BooleanVar(value=True)
-        prev.rfc_oob_score = tk.BooleanVar(value=False)
-        prev.rfc_n_jobs = tk.StringVar(value='None')
-        prev.rfc_random_state = tk.StringVar(value='None')
-        prev.rfc_verbose = tk.StringVar(value='0')
-        prev.rfc_warm_start = tk.BooleanVar(value=False)
-        prev.rfc_ccp_alpha = tk.StringVar(value='0.0')
-        prev.rfc_max_samples = tk.StringVar(value='None')
-        
-        prev.svc_include_comp = tk.BooleanVar(value=True)
-        prev.svc_C = tk.StringVar(value='1.0')
-        prev.svc_kernel = tk.StringVar(value='rbf')
-        prev.svc_degree = tk.StringVar(value='3')
-        prev.svc_gamma = tk.StringVar(value='scale')
-        prev.svc_coef0 = tk.StringVar(value='0.0')
-        prev.svc_shrinking = tk.BooleanVar(value=True)
-        prev.svc_probability = tk.BooleanVar(value=False)
-        prev.svc_tol = tk.StringVar(value='1e-3')
-        prev.svc_cache_size = tk.StringVar(value='200')
-        prev.svc_verbose = tk.BooleanVar(value=False)
-        prev.svc_max_iter = tk.StringVar(value='-1')
-        prev.svc_decision_function_shape = tk.StringVar(value='ovr')
-        prev.svc_break_ties = tk.BooleanVar(value=False)
-        prev.svc_random_state = tk.StringVar(value='None')
-        
-        prev.sgdc_include_comp = tk.BooleanVar(value=True)
-        prev.sgdc_loss = tk.StringVar(value='hinge')
-        prev.sgdc_penalty = tk.StringVar(value='l2')
-        prev.sgdc_alpha = tk.StringVar(value='0.0001')
-        prev.sgdc_l1_ratio = tk.StringVar(value='0.15')
-        prev.sgdc_fit_intercept = tk.BooleanVar(value=True)
-        prev.sgdc_max_iter = tk.StringVar(value='1000')
-        prev.sgdc_tol = tk.StringVar(value='1e-3')
-        prev.sgdc_shuffle = tk.BooleanVar(value=True)
-        prev.sgdc_verbose = tk.StringVar(value='0')
-        prev.sgdc_epsilon = tk.StringVar(value='0.1')
-        prev.sgdc_n_jobs = tk.StringVar(value='None')
-        prev.sgdc_random_state = tk.StringVar(value='None')
-        prev.sgdc_learning_rate = tk.StringVar(value='optimal')
-        prev.sgdc_eta0 = tk.StringVar(value='0.0')
-        prev.sgdc_power_t = tk.StringVar(value='0.5')
-        prev.sgdc_early_stopping = tk.BooleanVar(value=False)
-        prev.sgdc_validation_fraction = tk.StringVar(value='0.1')
-        prev.sgdc_n_iter_no_change = tk.StringVar(value='5')
-        prev.sgdc_warm_start = tk.BooleanVar(value=False)
-        prev.sgdc_average = tk.StringVar(value='False')
-        
-        prev.gpc_include_comp = tk.BooleanVar(value=True)
-        prev.gpc_n_restarts_optimizer = tk.StringVar(value='0')
-        prev.gpc_max_iter_predict = tk.StringVar(value='100')
-        prev.gpc_warm_start = tk.BooleanVar(value=False)
-        prev.gpc_copy_X_train = tk.BooleanVar(value=True)
-        prev.gpc_random_state = tk.StringVar(value='None')
-        prev.gpc_multi_class = tk.StringVar(value='one_vs_rest')
-        prev.gpc_n_jobs = tk.StringVar(value='None')
-        
-        prev.knc_include_comp = tk.BooleanVar(value=True)
-        prev.knc_n_neighbors = tk.StringVar(value='5')
-        prev.knc_weights = tk.StringVar(value='uniform')
-        prev.knc_algorithm = tk.StringVar(value='auto')
-        prev.knc_leaf_size = tk.StringVar(value='30')
-        prev.knc_p = tk.StringVar(value='2')
-        prev.knc_metric = tk.StringVar(value='minkowski')
-        prev.knc_n_jobs = tk.StringVar(value='None')
-        
-        prev.mlpc_include_comp = tk.BooleanVar(value=True)
-        prev.mlpc_hidden_layer_sizes = tk.StringVar(value='100')
-        prev.mlpc_activation = tk.StringVar(value='relu')
-        prev.mlpc_solver = tk.StringVar(value='adam')
-        prev.mlpc_alpha = tk.StringVar(value='0.0001')
-        prev.mlpc_batch_size = tk.StringVar(value='auto')
-        prev.mlpc_learning_rate = tk.StringVar(value='constant')
-        prev.mlpc_learning_rate_init = tk.StringVar(value='0.001')
-        prev.mlpc_power_t = tk.StringVar(value='0.5')
-        prev.mlpc_max_iter = tk.StringVar(value='200')
-        prev.mlpc_shuffle = tk.BooleanVar(value=True)
-        prev.mlpc_random_state = tk.StringVar(value='None')
-        prev.mlpc_tol = tk.StringVar(value='1e-4')
-        prev.mlpc_verbose = tk.BooleanVar(value=False)
-        prev.mlpc_warm_start = tk.BooleanVar(value=False)
-        prev.mlpc_momentum = tk.StringVar(value='0.9')
-        prev.mlpc_nesterovs_momentum = tk.BooleanVar(value=True)
-        prev.mlpc_early_stopping = tk.BooleanVar(value=False)
-        prev.mlpc_validation_fraction = tk.StringVar(value='0.1')
-        prev.mlpc_beta_1 = tk.StringVar(value='0.9')
-        prev.mlpc_beta_2 = tk.StringVar(value='0.999')
-        prev.mlpc_epsilon = tk.StringVar(value='1e-8')
-        prev.mlpc_n_iter_no_change = tk.StringVar(value='10')
-        prev.mlpc_max_fun = tk.StringVar(value='15000')
+    def restore_defaults(self, prev, parent):
+        if tk.messagebox.askyesno("Restore", "Restore default settings?"):
+            #methods parameters
+            prev.rc_include_comp = tk.BooleanVar(value=True)
+            prev.rc_alpha = tk.StringVar(value='1.0')
+            prev.rc_fit_intercept = tk.BooleanVar(value=True)
+            prev.rc_normalize = tk.BooleanVar(value=False)
+            prev.rc_copy_X = tk.BooleanVar(value=True)
+            prev.rc_max_iter = tk.StringVar(value='None')
+            prev.rc_tol = tk.StringVar(value='1e-3')
+            prev.rc_solver = tk.StringVar(value='auto')
+            prev.rc_random_state = tk.StringVar(value='None')
+            
+            prev.dtc_include_comp = tk.BooleanVar(value=True)
+            prev.dtc_criterion = tk.StringVar(value='gini')
+            prev.dtc_splitter = tk.StringVar(value='best')
+            prev.dtc_max_depth = tk.StringVar(value='None')
+            prev.dtc_min_samples_split = tk.StringVar(value='2')
+            prev.dtc_min_samples_leaf = tk.StringVar(value='1')
+            prev.dtc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+            prev.dtc_max_features = tk.StringVar(value='None')
+            prev.dtc_random_state = tk.StringVar(value='None')
+            prev.dtc_max_leaf_nodes = tk.StringVar(value='None')
+            prev.dtc_min_impurity_decrease = tk.StringVar(value='0.0')
+            prev.dtc_ccp_alpha = tk.StringVar(value='0.0')
+            
+            prev.rfc_include_comp = tk.BooleanVar(value=True)
+            prev.rfc_n_estimators = tk.StringVar(value='100')
+            prev.rfc_criterion = tk.StringVar(value='gini')
+            prev.rfc_max_depth = tk.StringVar(value='None')
+            prev.rfc_min_samples_split = tk.StringVar(value='2')
+            prev.rfc_min_samples_leaf = tk.StringVar(value='1')
+            prev.rfc_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+            prev.rfc_max_features = tk.StringVar(value='auto')
+            prev.rfc_max_leaf_nodes = tk.StringVar(value='None')
+            prev.rfc_min_impurity_decrease = tk.StringVar(value='0.0')
+            prev.rfc_bootstrap = tk.BooleanVar(value=True)
+            prev.rfc_oob_score = tk.BooleanVar(value=False)
+            prev.rfc_n_jobs = tk.StringVar(value='None')
+            prev.rfc_random_state = tk.StringVar(value='None')
+            prev.rfc_verbose = tk.StringVar(value='0')
+            prev.rfc_warm_start = tk.BooleanVar(value=False)
+            prev.rfc_ccp_alpha = tk.StringVar(value='0.0')
+            prev.rfc_max_samples = tk.StringVar(value='None')
+            
+            prev.svc_include_comp = tk.BooleanVar(value=True)
+            prev.svc_C = tk.StringVar(value='1.0')
+            prev.svc_kernel = tk.StringVar(value='rbf')
+            prev.svc_degree = tk.StringVar(value='3')
+            prev.svc_gamma = tk.StringVar(value='scale')
+            prev.svc_coef0 = tk.StringVar(value='0.0')
+            prev.svc_shrinking = tk.BooleanVar(value=True)
+            prev.svc_probability = tk.BooleanVar(value=False)
+            prev.svc_tol = tk.StringVar(value='1e-3')
+            prev.svc_cache_size = tk.StringVar(value='200')
+            prev.svc_verbose = tk.BooleanVar(value=False)
+            prev.svc_max_iter = tk.StringVar(value='-1')
+            prev.svc_decision_function_shape = tk.StringVar(value='ovr')
+            prev.svc_break_ties = tk.BooleanVar(value=False)
+            prev.svc_random_state = tk.StringVar(value='None')
+            
+            prev.sgdc_include_comp = tk.BooleanVar(value=True)
+            prev.sgdc_loss = tk.StringVar(value='hinge')
+            prev.sgdc_penalty = tk.StringVar(value='l2')
+            prev.sgdc_alpha = tk.StringVar(value='0.0001')
+            prev.sgdc_l1_ratio = tk.StringVar(value='0.15')
+            prev.sgdc_fit_intercept = tk.BooleanVar(value=True)
+            prev.sgdc_max_iter = tk.StringVar(value='1000')
+            prev.sgdc_tol = tk.StringVar(value='1e-3')
+            prev.sgdc_shuffle = tk.BooleanVar(value=True)
+            prev.sgdc_verbose = tk.StringVar(value='0')
+            prev.sgdc_epsilon = tk.StringVar(value='0.1')
+            prev.sgdc_n_jobs = tk.StringVar(value='None')
+            prev.sgdc_random_state = tk.StringVar(value='None')
+            prev.sgdc_learning_rate = tk.StringVar(value='optimal')
+            prev.sgdc_eta0 = tk.StringVar(value='0.0')
+            prev.sgdc_power_t = tk.StringVar(value='0.5')
+            prev.sgdc_early_stopping = tk.BooleanVar(value=False)
+            prev.sgdc_validation_fraction = tk.StringVar(value='0.1')
+            prev.sgdc_n_iter_no_change = tk.StringVar(value='5')
+            prev.sgdc_warm_start = tk.BooleanVar(value=False)
+            prev.sgdc_average = tk.StringVar(value='False')
+            
+            prev.gpc_include_comp = tk.BooleanVar(value=True)
+            prev.gpc_n_restarts_optimizer = tk.StringVar(value='0')
+            prev.gpc_max_iter_predict = tk.StringVar(value='100')
+            prev.gpc_warm_start = tk.BooleanVar(value=False)
+            prev.gpc_copy_X_train = tk.BooleanVar(value=True)
+            prev.gpc_random_state = tk.StringVar(value='None')
+            prev.gpc_multi_class = tk.StringVar(value='one_vs_rest')
+            prev.gpc_n_jobs = tk.StringVar(value='None')
+            
+            prev.knc_include_comp = tk.BooleanVar(value=True)
+            prev.knc_n_neighbors = tk.StringVar(value='5')
+            prev.knc_weights = tk.StringVar(value='uniform')
+            prev.knc_algorithm = tk.StringVar(value='auto')
+            prev.knc_leaf_size = tk.StringVar(value='30')
+            prev.knc_p = tk.StringVar(value='2')
+            prev.knc_metric = tk.StringVar(value='minkowski')
+            prev.knc_n_jobs = tk.StringVar(value='None')
+            
+            prev.mlpc_include_comp = tk.BooleanVar(value=True)
+            prev.mlpc_hidden_layer_sizes = tk.StringVar(value='100')
+            prev.mlpc_activation = tk.StringVar(value='relu')
+            prev.mlpc_solver = tk.StringVar(value='adam')
+            prev.mlpc_alpha = tk.StringVar(value='0.0001')
+            prev.mlpc_batch_size = tk.StringVar(value='auto')
+            prev.mlpc_learning_rate = tk.StringVar(value='constant')
+            prev.mlpc_learning_rate_init = tk.StringVar(value='0.001')
+            prev.mlpc_power_t = tk.StringVar(value='0.5')
+            prev.mlpc_max_iter = tk.StringVar(value='200')
+            prev.mlpc_shuffle = tk.BooleanVar(value=True)
+            prev.mlpc_random_state = tk.StringVar(value='None')
+            prev.mlpc_tol = tk.StringVar(value='1e-4')
+            prev.mlpc_verbose = tk.BooleanVar(value=False)
+            prev.mlpc_warm_start = tk.BooleanVar(value=False)
+            prev.mlpc_momentum = tk.StringVar(value='0.9')
+            prev.mlpc_nesterovs_momentum = tk.BooleanVar(value=True)
+            prev.mlpc_early_stopping = tk.BooleanVar(value=False)
+            prev.mlpc_validation_fraction = tk.StringVar(value='0.1')
+            prev.mlpc_beta_1 = tk.StringVar(value='0.9')
+            prev.mlpc_beta_2 = tk.StringVar(value='0.999')
+            prev.mlpc_epsilon = tk.StringVar(value='1e-8')
+            prev.mlpc_n_iter_no_change = tk.StringVar(value='10')
+            prev.mlpc_max_fun = tk.StringVar(value='15000')
 
-        prev.xgbc_include_comp = tk.BooleanVar(value=True)
-        prev.xgbc_n_estimators = tk.StringVar(value='1000')
-        prev.xgbc_eta = tk.StringVar(value='0.3')
-        prev.xgbc_min_child_weight = tk.StringVar(value='1')
-        prev.xgbc_max_depth = tk.StringVar(value='6')
-        prev.xgbc_gamma = tk.StringVar(value='0')
-        prev.xgbc_subsample = tk.StringVar(value='1.0')
-        prev.xgbc_colsample_bytree = tk.StringVar(value='1.0')
-        prev.xgbc_lambda = tk.StringVar(value='1.0')
-        prev.xgbc_alpha = tk.StringVar(value='0.0')
-        prev.xgbc_use_gpu = tk.BooleanVar(value=False)
+            prev.xgbc_include_comp = tk.BooleanVar(value=True)
+            prev.xgbc_n_estimators = tk.StringVar(value='1000')
+            prev.xgbc_eta = tk.StringVar(value='0.1')
+            prev.xgbc_min_child_weight = tk.StringVar(value='1')
+            prev.xgbc_max_depth = tk.StringVar(value='6')
+            prev.xgbc_gamma = tk.StringVar(value='1')
+            prev.xgbc_subsample = tk.StringVar(value='1.0')
+            prev.xgbc_colsample_bytree = tk.StringVar(value='1.0')
+            prev.xgbc_lambda = tk.StringVar(value='1.0')
+            prev.xgbc_alpha = tk.StringVar(value='0.0')
+            prev.xgbc_use_gpu = tk.BooleanVar(value=False)
+            prev.xgbc_eval_metric = tk.StringVar(value='logloss')
+            prev.xgbc_early_stopping = tk.BooleanVar(value=False)
+            prev.xgbc_n_iter_no_change = tk.StringVar(value='100')
+            prev.xgbc_validation_fraction = tk.StringVar(value='0.2')
+            prev.xgbc_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.xgbc_cv_voting_folds = tk.StringVar(value='5')
 
-        prev.cbc_include_comp = tk.BooleanVar(value=False)
-        prev.cbc_iterations = tk.StringVar(value='1000')
-        prev.cbc_learning_rate = tk.StringVar(value='None')
-        prev.cbc_depth = tk.StringVar(value='6')
-        prev.cbc_reg_lambda = tk.StringVar(value='3.0')
-        prev.cbc_subsample = tk.StringVar(value='None')
-        prev.cbc_colsample_bylevel = tk.StringVar(value='1.0')
-        prev.cbc_random_strength = tk.StringVar(value='1.0')
-        prev.cbc_use_gpu = tk.BooleanVar(value=False)
-        prev.cbc_cf_list = tk.StringVar(value='[]')
+            prev.cbc_include_comp = tk.BooleanVar(value=True)
+            prev.cbc_iterations = tk.StringVar(value='1000')
+            prev.cbc_learning_rate = tk.StringVar(value='None')
+            prev.cbc_depth = tk.StringVar(value='6')
+            prev.cbc_reg_lambda = tk.StringVar(value='None')
+            prev.cbc_subsample = tk.StringVar(value='None')
+            prev.cbc_colsample_bylevel = tk.StringVar(value='1.0')
+            prev.cbc_random_strength = tk.StringVar(value='1.0')
+            prev.cbc_use_gpu = tk.BooleanVar(value=False)
+            prev.cbc_cf_list = tk.StringVar(value='[]')
+            prev.cbc_early_stopping = tk.BooleanVar(value=False)
+            prev.cbc_n_iter_no_change = tk.StringVar(value='100')
+            prev.cbc_validation_fraction = tk.StringVar(value='0.2')
+            prev.cbc_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.cbc_cv_voting_folds = tk.StringVar(value='5')
+
+            prev.lgbmc_include_comp = tk.BooleanVar(value=True)
+            prev.lgbmc_boosting_type = tk.StringVar(value='gbdt')
+            prev.lgbmc_num_leaves = tk.StringVar(value='31')
+            prev.lgbmc_max_depth = tk.StringVar(value='-1')
+            prev.lgbmc_learning_rate = tk.StringVar(value='0.1')
+            prev.lgbmc_n_estimators = tk.StringVar(value='100')
+            prev.lgbmc_subsample_for_bin = tk.StringVar(value='200000')
+            prev.lgbmc_min_split_gain = tk.StringVar(value='0.0')
+            prev.lgbmc_min_child_weight = tk.StringVar(value='1e-3')
+            prev.lgbmc_min_child_samples = tk.StringVar(value='20')
+            prev.lgbmc_subsample = tk.StringVar(value='1.0')
+            prev.lgbmc_subsample_freq = tk.StringVar(value='0')
+            prev.lgbmc_colsample_bytree = tk.StringVar(value='1.0')
+            prev.lgbmc_reg_alpha = tk.StringVar(value='0.0')
+            prev.lgbmc_reg_lambda = tk.StringVar(value='0.0')
+            prev.lgbmc_n_jobs = tk.StringVar(value='-1')
+            prev.lgbmc_silent = tk.BooleanVar(value=True)
+            prev.lgbmc_categorical_feature = tk.StringVar(value='auto')
+            prev.lgbmc_eval_metric = tk.StringVar(value='rmse')
+            prev.lgbmc_early_stopping = tk.BooleanVar(value=False)
+            prev.lgbmc_n_iter_no_change = tk.StringVar(value='100')
+            prev.lgbmc_validation_fraction = tk.StringVar(value='0.2')
+            prev.lgbmc_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.lgbmc_cv_voting_folds = tk.StringVar(value='5')
+
+            quit_back(self.root, prev.root)
+            clf_mtds_specification(prev, parent)
+
+    def save_settings(self, prev, parent):
+        save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
+            filetypes = (("Text files","*.txt"),)
+            ), 'w')
+        save_file.write(
+            str({
+                'rc_include_comp' : prev.rc_include_comp.get(),
+                'rc_alpha' : prev.rc_alpha.get(),
+                'rc_fit_intercept' : prev.rc_fit_intercept.get(),
+                'rc_normalize' : prev.rc_normalize.get(),
+                'rc_copy_X' : prev.rc_copy_X.get(),
+                'rc_max_iter' : prev.rc_max_iter.get(),
+                'rc_tol' : prev.rc_tol.get(),
+                'rc_solver' : prev.rc_solver.get(),
+                'rc_random_state' : prev.rc_random_state.get(),
+                
+                'dtc_include_comp' : prev.dtc_include_comp.get(),
+                'dtc_criterion' : prev.dtc_criterion.get(),
+                'dtc_splitter' : prev.dtc_splitter.get(),
+                'dtc_max_depth' : prev.dtc_max_depth.get(),
+                'dtc_min_samples_split' : prev.dtc_min_samples_split.get(),
+                'dtc_min_samples_leaf' : prev.dtc_min_samples_leaf.get(),
+                'dtc_min_weight_fraction_leaf' : prev.dtc_min_weight_fraction_leaf.get(),
+                'dtc_max_features' : prev.dtc_max_features.get(),
+                'dtc_random_state' : prev.dtc_random_state.get(),
+                'dtc_max_leaf_nodes' : prev.dtc_max_leaf_nodes.get(),
+                'dtc_min_impurity_decrease' : prev.dtc_min_impurity_decrease.get(),
+                'dtc_ccp_alpha' : prev.dtc_ccp_alpha.get(),
+                
+                'rfc_include_comp' : prev.rfc_include_comp.get(),
+                'rfc_n_estimators' : prev.rfc_n_estimators.get(),
+                'rfc_criterion' : prev.rfc_criterion.get(),
+                'rfc_max_depth' : prev.rfc_max_depth.get(),
+                'rfc_min_samples_split' : prev.rfc_min_samples_split.get(),
+                'rfc_min_samples_leaf' : prev.rfc_min_samples_leaf.get(),
+                'rfc_min_weight_fraction_leaf' : prev.rfc_min_weight_fraction_leaf.get(),
+                'rfc_max_features' : prev.rfc_max_features.get(),
+                'rfc_max_leaf_nodes' : prev.rfc_max_leaf_nodes.get(),
+                'rfc_min_impurity_decrease' : prev.rfc_min_impurity_decrease.get(),
+                'rfc_bootstrap' : prev.rfc_bootstrap.get(),
+                'rfc_oob_score' : prev.rfc_oob_score.get(),
+                'rfc_n_jobs' : prev.rfc_n_jobs.get(),
+                'rfc_random_state' : prev.rfc_random_state.get(),
+                'rfc_verbose' : prev.rfc_verbose.get(),
+                'rfc_warm_start' : prev.rfc_warm_start.get(),
+                'rfc_ccp_alpha' : prev.rfc_ccp_alpha.get(),
+                'rfc_max_samples' : prev.rfc_max_samples.get(),
+                
+                'svc_include_comp' : prev.svc_include_comp.get(),
+                'svc_C' : prev.svc_C.get(),
+                'svc_kernel' : prev.svc_kernel.get(),
+                'svc_degree' : prev.svc_degree.get(),
+                'svc_gamma' : prev.svc_gamma.get(),
+                'svc_coef0' : prev.svc_coef0.get(),
+                'svc_shrinking' : prev.svc_shrinking.get(),
+                'svc_probability' : prev.svc_probability.get(),
+                'svc_tol' : prev.svc_tol.get(),
+                'svc_cache_size' : prev.svc_cache_size.get(),
+                'svc_verbose' : prev.svc_verbose.get(),
+                'svc_max_iter' : prev.svc_max_iter.get(),
+                'svc_decision_function_shape' : prev.svc_decision_function_shape.get(),
+                'svc_break_ties' : prev.svc_break_ties.get(),
+                'svc_random_state' : prev.svc_random_state.get(),
+                
+                'sgdc_include_comp' : prev.sgdc_include_comp.get(),
+                'sgdc_loss' : prev.sgdc_loss.get(),
+                'sgdc_penalty' : prev.sgdc_penalty.get(),
+                'sgdc_alpha' : prev.sgdc_alpha.get(),
+                'sgdc_l1_ratio' : prev.sgdc_l1_ratio.get(),
+                'sgdc_fit_intercept' : prev.sgdc_fit_intercept.get(),
+                'sgdc_max_iter' : prev.sgdc_max_iter.get(),
+                'sgdc_tol' : prev.sgdc_tol.get(),
+                'sgdc_shuffle' : prev.sgdc_shuffle.get(),
+                'sgdc_verbose' : prev.sgdc_verbose.get(),
+                'sgdc_epsilon' : prev.sgdc_epsilon.get(),
+                'sgdc_n_jobs' : prev.sgdc_n_jobs.get(),
+                'sgdc_random_state' : prev.sgdc_random_state.get(),
+                'sgdc_learning_rate' : prev.sgdc_learning_rate.get(),
+                'sgdc_eta0' : prev.sgdc_eta0.get(),
+                'sgdc_power_t' : prev.sgdc_power_t.get(),
+                'sgdc_early_stopping' : prev.sgdc_early_stopping.get(),
+                'sgdc_validation_fraction' : prev.sgdc_validation_fraction.get(),
+                'sgdc_n_iter_no_change' : prev.sgdc_n_iter_no_change.get(),
+                'sgdc_warm_start' : prev.sgdc_warm_start.get(),
+                'sgdc_average' : prev.sgdc_average.get(),
+                
+                'gpc_include_comp' : prev.gpc_include_comp.get(),
+                'gpc_n_restarts_optimizer' : prev.gpc_n_restarts_optimizer.get(),
+                'gpc_max_iter_predict' : prev.gpc_max_iter_predict.get(),
+                'gpc_warm_start' : prev.gpc_warm_start.get(),
+                'gpc_copy_X_train' : prev.gpc_copy_X_train.get(),
+                'gpc_random_state' : prev.gpc_random_state.get(),
+                'gpc_multi_class' : prev.gpc_multi_class.get(),
+                'gpc_n_jobs' : prev.gpc_n_jobs.get(),
+                
+                'knc_include_comp' : prev.knc_include_comp.get(),
+                'knc_n_neighbors' : prev.knc_n_neighbors.get(),
+                'knc_weights' : prev.knc_weights.get(),
+                'knc_algorithm' : prev.knc_algorithm.get(),
+                'knc_leaf_size' : prev.knc_leaf_size.get(),
+                'knc_p' : prev.knc_p.get(),
+                'knc_metric' : prev.knc_metric.get(),
+                'knc_n_jobs' : prev.knc_n_jobs.get(),
+                
+                'mlpc_include_comp' : prev.mlpc_include_comp.get(),
+                'mlpc_hidden_layer_sizes' : prev.mlpc_hidden_layer_sizes.get(),
+                'mlpc_activation' : prev.mlpc_activation.get(),
+                'mlpc_solver' : prev.mlpc_solver.get(),
+                'mlpc_alpha' : prev.mlpc_alpha.get(),
+                'mlpc_batch_size' : prev.mlpc_batch_size.get(),
+                'mlpc_learning_rate' : prev.mlpc_learning_rate.get(),
+                'mlpc_learning_rate_init' : prev.mlpc_learning_rate_init.get(),
+                'mlpc_power_t' : prev.mlpc_power_t.get(),
+                'mlpc_max_iter' : prev.mlpc_max_iter.get(),
+                'mlpc_shuffle' : prev.mlpc_shuffle.get(),
+                'mlpc_random_state' : prev.mlpc_random_state.get(),
+                'mlpc_tol' : prev.mlpc_tol.get(),
+                'mlpc_verbose' : prev.mlpc_verbose.get(),
+                'mlpc_warm_start' : prev.mlpc_warm_start.get(),
+                'mlpc_momentum' : prev.mlpc_momentum.get(),
+                'mlpc_nesterovs_momentum' : prev.mlpc_nesterovs_momentum.get(),
+                'mlpc_early_stopping' : prev.mlpc_early_stopping.get(),
+                'mlpc_validation_fraction' : prev.mlpc_validation_fraction.get(),
+                'mlpc_beta_1' : prev.mlpc_beta_1.get(),
+                'mlpc_beta_2' : prev.mlpc_beta_2.get(),
+                'mlpc_epsilon' : prev.mlpc_epsilon.get(),
+                'mlpc_n_iter_no_change' : prev.mlpc_n_iter_no_change.get(),
+                'mlpc_max_fun' : prev.mlpc_max_fun.get(),
+
+                'xgbc_include_comp' : prev.xgbc_include_comp.get(),
+                'xgbc_n_estimators' : prev.xgbc_n_estimators.get(),
+                'xgbc_eta' : prev.xgbc_eta.get(),
+                'xgbc_min_child_weight' : prev.xgbc_min_child_weight.get(),
+                'xgbc_max_depth' : prev.xgbc_max_depth.get(),
+                'xgbc_gamma' : prev.xgbc_gamma.get(),
+                'xgbc_subsample' : prev.xgbc_subsample.get(),
+                'xgbc_colsample_bytree' : prev.xgbc_colsample_bytree.get(),
+                'xgbc_lambda' : prev.xgbc_lambda.get(),
+                'xgbc_alpha' : prev.xgbc_alpha.get(),
+                'xgbc_use_gpu' : prev.xgbc_use_gpu.get(),
+                'xgbc_eval_metric' : prev.xgbc_eval_metric.get(),
+                'xgbc_early_stopping' : prev.xgbc_early_stopping.get(),
+                'xgbc_n_iter_no_change' : prev.xgbc_n_iter_no_change.get(),
+                'xgbc_validation_fraction' : prev.xgbc_validation_fraction.get(),
+                'xgbc_cv_voting_mode' : prev.xgbc_cv_voting_mode.get(),
+                'xgbc_cv_voting_folds' : prev.xgbc_cv_voting_folds.get(),
+
+                'cbc_include_comp' : prev.cbc_include_comp.get(),
+                'cbc_iterations' : prev.cbc_iterations.get(),
+                'cbc_learning_rate' : prev.cbc_learning_rate.get(),
+                'cbc_depth' : prev.cbc_depth.get(),
+                'cbc_reg_lambda' : prev.cbc_reg_lambda.get(),
+                'cbc_subsample' : prev.cbc_subsample.get(),
+                'cbc_colsample_bylevel' : prev.cbc_colsample_bylevel.get(),
+                'cbc_random_strength' : prev.cbc_random_strength.get(),
+                'cbc_use_gpu' : prev.cbc_use_gpu.get(),
+                'cbc_cf_list' : prev.cbc_cf_list.get(),
+                'cbc_early_stopping' : prev.cbc_early_stopping.get(),
+                'cbc_n_iter_no_change' : prev.cbc_n_iter_no_change.get(),
+                'cbc_validation_fraction' : prev.cbc_validation_fraction.get(),
+                'cbc_cv_voting_mode' : prev.cbc_cv_voting_mode.get(),
+                'cbc_cv_voting_folds' : prev.cbc_cv_voting_folds.get(),
+
+                'lgbmc_include_comp' : prev.lgbmc_include_comp.get(),
+                'lgbmc_boosting_type' : prev.lgbmc_boosting_type.get(),
+                'lgbmc_num_leaves' : prev.lgbmc_num_leaves.get(),
+                'lgbmc_max_depth' : prev.lgbmc_max_depth.get(),
+                'lgbmc_learning_rate' : prev.lgbmc_learning_rate.get(),
+                'lgbmc_n_estimators' : prev.lgbmc_n_estimators.get(),
+                'lgbmc_subsample_for_bin' : prev.lgbmc_subsample_for_bin.get(),
+                'lgbmc_min_split_gain' : prev.lgbmc_min_split_gain.get(),
+                'lgbmc_min_child_weight' : prev.lgbmc_min_child_weight.get(),
+                'lgbmc_min_child_samples' : prev.lgbmc_min_child_samples.get(),
+                'lgbmc_subsample' : prev.lgbmc_subsample.get(),
+                'lgbmc_subsample_freq' : prev.lgbmc_subsample_freq.get(),
+                'lgbmc_colsample_bytree' : prev.lgbmc_colsample_bytree.get(),
+                'lgbmc_reg_alpha' : prev.lgbmc_reg_alpha.get(),
+                'lgbmc_reg_lambda' : prev.lgbmc_reg_lambda.get(),
+                'lgbmc_n_jobs' : prev.lgbmc_n_jobs.get(),
+                'lgbmc_silent' : prev.lgbmc_silent.get(),
+                'lgbmc_categorical_feature' : prev.lgbmc_categorical_feature.get(),
+                'lgbmc_eval_metric' : prev.lgbmc_eval_metric.get(),
+                'lgbmc_early_stopping' : prev.lgbmc_early_stopping.get(),
+                'lgbmc_n_iter_no_change' : prev.lgbmc_n_iter_no_change.get(),
+                'lgbmc_validation_fraction' : prev.lgbmc_validation_fraction.get(),
+                'lgbmc_cv_voting_mode' : prev.lgbmc_cv_voting_mode.get(),
+                'lgbmc_cv_voting_folds' : prev.lgbmc_cv_voting_folds.get(),
+            })
+        )
+        save_file.close()
+
+    def load_settings(self, prev, parent):
+        load_file = open(askopenfilename(parent=self.root,
+            filetypes = (("Text files","*.txt"),)
+            ), 'r')
+        settings_dict = eval(load_file.read())
+        for key in settings_dict:
+            getattr(prev, key).set(settings_dict[key])
+            # prev.eval(key).set(settings_dict[key])
+            # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
+        clf_mtds_specification(prev, parent)

@@ -1,6 +1,7 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 import os
 import sys
 import numpy as np
@@ -8,7 +9,7 @@ import webbrowser
 import pandas as pd
 import sklearn
 from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results
+from utils import *
 
 # fonts
 myfont = (None, 13)
@@ -333,15 +334,18 @@ class dcmp_app:
             values=['Join: start', 'Join: end', 'Replace'])
         self.combobox10.place(x=150,y=262)
 
-        ttk.Button(self.frame, text='Decompose', 
-                  command=lambda: try_decompose(method=self.dcmp_method.get())).place(x=400, y=230)
+        ttk.Button(self.frame, text='Decompose', width=10,
+                  command=lambda: try_decompose(method=self.dcmp_method.get())).place(x=385, y=240)
 
-        ttk.Button(self.frame, text='Save results', 
+        ttk.Button(self.frame, text='Save to file', width=9,
             command=lambda: save_results(self, 
-                self.decomposition, 'dcmp result')).place(x=400, y=270)
+                self.decomposition, 'dcmp result')).place(x=500, y=240)
 
-        ttk.Button(self.frame, text='Quit', 
-                  command=lambda: quit_back(dcmp_app.root, parent)).place(x=400, y=310)
+        ttk.Button(self.frame, text='Save to sql', width=9,
+            command=lambda: save_to_sql(self, self.decomposition, 'dcmp_result')).place(x=500, y=275)
+
+        ttk.Button(self.frame, text='Quit', width=10,
+                  command=lambda: quit_back(dcmp_app.root, parent)).place(x=385, y=275)
 
 # methods' specifications
 class dcmp_mtds_specification:
@@ -368,7 +372,11 @@ class dcmp_mtds_specification:
         settings_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         settings_menu.add_command(label='Restore Defaults', 
-            command=lambda: self.restore_defaults(prev))
+            command=lambda: self.restore_defaults(prev, parent))
+        settings_menu.add_command(label='Save settings', 
+            command=lambda: self.save_settings(prev, parent))
+        settings_menu.add_command(label='Load settings', 
+            command=lambda: self.load_settings(prev, parent))
 
         ttk.Label(self.frame, text='PCA', font=myfont_b).place(x=55, y=10)
         ttk.Label(self.frame, text='Copy', font=myfont2).place(x=5, y=40)
@@ -500,46 +508,109 @@ class dcmp_mtds_specification:
             command=lambda: quit_back(self.root, dcmp_app.root)).place(relx=0.8, rely=0.92)
 
     # restore default values
-    def restore_defaults(self, prev):
+    def restore_defaults(self, prev, parent):
+        if tk.messagebox.askyesno("Restore", "Restore default settings?"):
 
-        prev.pca_copy = tk.BooleanVar(value=True)
-        prev.pca_whiten = tk.BooleanVar(value=False)
-        prev.pca_svd_solver = tk.StringVar(value='auto')
-        prev.pca_tol = tk.StringVar(value='0.0')
-        prev.pca_iterated_power = tk.StringVar(value='auto')
-        prev.pca_random_state = tk.StringVar(value='None')
+            prev.pca_copy = tk.BooleanVar(value=True)
+            prev.pca_whiten = tk.BooleanVar(value=False)
+            prev.pca_svd_solver = tk.StringVar(value='auto')
+            prev.pca_tol = tk.StringVar(value='0.0')
+            prev.pca_iterated_power = tk.StringVar(value='auto')
+            prev.pca_random_state = tk.StringVar(value='None')
 
-        prev.fa_tol = tk.StringVar(value='1e-2')
-        prev.fa_copy = tk.BooleanVar(value=True)
-        prev.fa_max_iter = tk.StringVar(value='1000')
-        prev.fa_svd_method = tk.StringVar(value='randomized')
-        prev.fa_iterated_power = tk.StringVar(value='3')
-        prev.fa_rotation = tk.StringVar(value='None')
-        prev.fa_random_state = tk.StringVar(value='0')
+            prev.fa_tol = tk.StringVar(value='1e-2')
+            prev.fa_copy = tk.BooleanVar(value=True)
+            prev.fa_max_iter = tk.StringVar(value='1000')
+            prev.fa_svd_method = tk.StringVar(value='randomized')
+            prev.fa_iterated_power = tk.StringVar(value='3')
+            prev.fa_rotation = tk.StringVar(value='None')
+            prev.fa_random_state = tk.StringVar(value='0')
 
-        prev.ipca_whiten = tk.BooleanVar(value=False)
-        prev.ipca_copy = tk.BooleanVar(value=True)
-        prev.ipca_batch_size = tk.StringVar(value='None')
+            prev.ipca_whiten = tk.BooleanVar(value=False)
+            prev.ipca_copy = tk.BooleanVar(value=True)
+            prev.ipca_batch_size = tk.StringVar(value='None')
 
-        prev.kpca_kernel = tk.StringVar(value='linear')
-        prev.kpca_gamma = tk.StringVar(value='None')
-        prev.kpca_degree = tk.StringVar(value='3')
-        prev.kpca_coef0 = tk.StringVar(value='1.0')
-        prev.kpca_alpha = tk.StringVar(value='1.0')
-        prev.kpca_fit_inverse_transform = tk.BooleanVar(value=False)
-        prev.kpca_eigen_solver = tk.StringVar(value='auto')
-        prev.kpca_tol = tk.StringVar(value='0.0')
-        prev.kpca_max_iter = tk.StringVar(value='None')
-        prev.kpca_remove_zero_eig = tk.BooleanVar(value=False)
-        prev.kpca_random_state = tk.StringVar(value='None')
-        prev.kpca_copy_X = tk.BooleanVar(value=True)
-        prev.kpca_n_jobs = tk.StringVar(value='None')
+            prev.kpca_kernel = tk.StringVar(value='linear')
+            prev.kpca_gamma = tk.StringVar(value='None')
+            prev.kpca_degree = tk.StringVar(value='3')
+            prev.kpca_coef0 = tk.StringVar(value='1.0')
+            prev.kpca_alpha = tk.StringVar(value='1.0')
+            prev.kpca_fit_inverse_transform = tk.BooleanVar(value=False)
+            prev.kpca_eigen_solver = tk.StringVar(value='auto')
+            prev.kpca_tol = tk.StringVar(value='0.0')
+            prev.kpca_max_iter = tk.StringVar(value='None')
+            prev.kpca_remove_zero_eig = tk.BooleanVar(value=False)
+            prev.kpca_random_state = tk.StringVar(value='None')
+            prev.kpca_copy_X = tk.BooleanVar(value=True)
+            prev.kpca_n_jobs = tk.StringVar(value='None')
 
-        prev.fica_algorithm = tk.StringVar(value='parallel')
-        prev.fica_whiten = tk.BooleanVar(value=True)
-        prev.fica_fun = tk.StringVar(value='logcosh')
-        prev.fica_max_iter = tk.StringVar(value='200')
-        prev.fica_tol = tk.StringVar(value='1e-4')
-        prev.fica_random_state = tk.StringVar(value='None')
+            prev.fica_algorithm = tk.StringVar(value='parallel')
+            prev.fica_whiten = tk.BooleanVar(value=True)
+            prev.fica_fun = tk.StringVar(value='logcosh')
+            prev.fica_max_iter = tk.StringVar(value='200')
+            prev.fica_tol = tk.StringVar(value='1e-4')
+            prev.fica_random_state = tk.StringVar(value='None')
+
+            quit_back(self.root, prev.root)
+            dcmp_mtds_specification(prev, parent)
+
+    def save_settings(self, prev, parent):
+        save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
+            filetypes = (("Text files","*.txt"),)
+            ), 'w')
+        save_file.write(
+            str({
+                'pca_copy' : prev.pca_copy.get(),
+                'pca_whiten' : prev.pca_whiten.get(),
+                'pca_svd_solver' : prev.pca_svd_solver.get(),
+                'pca_tol' : prev.pca_tol.get(),
+                'pca_iterated_power' : prev.pca_iterated_power.get(),
+                'pca_random_state' : prev.pca_random_state.get(),
+
+                'fa_tol' : prev.fa_tol.get(),
+                'fa_copy' : prev.fa_copy.get(),
+                'fa_max_iter' : prev.fa_max_iter.get(),
+                'fa_svd_method' : prev.fa_svd_method.get(),
+                'fa_iterated_power' : prev.fa_iterated_power.get(),
+                'fa_rotation' : prev.fa_rotation.get(),
+                'fa_random_state' : prev.fa_random_state.get(),
+
+                'ipca_whiten' : prev.ipca_whiten.get(),
+                'ipca_copy' : prev.ipca_copy.get(),
+                'ipca_batch_size' : prev.ipca_batch_size.get(),
+
+                'kpca_kernel' : prev.kpca_kernel.get(),
+                'kpca_gamma' : prev.kpca_gamma.get(),
+                'kpca_degree' : prev.kpca_degree.get(),
+                'kpca_coef0' : prev.kpca_coef0.get(),
+                'kpca_alpha' : prev.kpca_alpha.get(),
+                'kpca_fit_inverse_transform' : prev.kpca_fit_inverse_transform.get(),
+                'kpca_eigen_solver' : prev.kpca_eigen_solver.get(),
+                'kpca_tol' : prev.kpca_tol.get(),
+                'kpca_max_iter' : prev.kpca_max_iter.get(),
+                'kpca_remove_zero_eig' : prev.kpca_remove_zero_eig.get(),
+                'kpca_random_state' : prev.kpca_random_state.get(),
+                'kpca_copy_X' : prev.kpca_copy_X.get(),
+                'kpca_n_jobs' : prev.kpca_n_jobs.get(),
+
+                'fica_algorithm' : prev.fica_algorithm.get(),
+                'fica_whiten' : prev.fica_whiten.get(),
+                'fica_fun' : prev.fica_fun.get(),
+                'fica_max_iter' : prev.fica_max_iter.get(),
+                'fica_tol' : prev.fica_tol.get(),
+                'fica_random_state' : prev.fica_random_state.get(),
+            })
+        )
+        save_file.close()
+
+    def load_settings(self, prev, parent):
+        load_file = open(askopenfilename(parent=self.root,
+            filetypes = (("Text files","*.txt"),)
+            ), 'r')
+        settings_dict = eval(load_file.read())
+        for key in settings_dict:
+            getattr(prev, key).set(settings_dict[key])
+            # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
+        dcmp_mtds_specification(prev, parent)

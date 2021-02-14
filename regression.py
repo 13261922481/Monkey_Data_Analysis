@@ -1,6 +1,7 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from threading import Thread
 import os
 import sys
@@ -9,7 +10,7 @@ import webbrowser
 import pandas as pd
 import sklearn
 from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results
+from utils import *
 
 # fonts
 myfont = (None, 12)
@@ -35,7 +36,7 @@ class rgr_app:
             self.root = tk.Toplevel(parent)
             #setting main window's parameters     
             w = 250
-            h = 450  
+            h = 500  
             x = (parent.ws/2) - (w/2)
             y = (parent.hs/2) - (h/2) - 30
             self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
@@ -62,6 +63,7 @@ class rgr_app:
             ttk.Label(self.frame, text='Multi-layer Perceptron:', font=myfont1).place(x=10,y=330)
             ttk.Label(self.frame, text='XGB:', font=myfont1).place(x=10,y=360)
             ttk.Label(self.frame, text='CatBoost:', font=myfont1).place(x=10,y=390)
+            ttk.Label(self.frame, text='LightGBM:', font=myfont1).place(x=10,y=420)
 
             if 'lr' in prev.scores.keys():
                 ttk.Label(self.frame, text="{:.4f}". format(prev.scores['lr']), 
@@ -123,9 +125,14 @@ class rgr_app:
                     font=myfont1).place(x=200,y=390)
             else:
                 ttk.Label(self.frame, text="nan", font=myfont1).place(x=200,y=390)
+            if 'lgbmr' in prev.scores.keys():
+                ttk.Label(self.frame, text="{:.4f}". format(prev.scores['lgbmr']), 
+                    font=myfont1).place(x=200,y=420)
+            else:
+                ttk.Label(self.frame, text="nan", font=myfont1).place(x=200,y=420)
 
             ttk.Button(self.frame, text='OK', 
-                command=lambda: quit_back(self.root, prev.root)).place(x=110, y=420)
+                command=lambda: quit_back(self.root, prev.root)).place(x=90, y=460)
 
     # App to do grid search for hyperparameters
     class Grid_search:
@@ -151,7 +158,7 @@ class rgr_app:
             self.combobox1 = ttk.Combobox(self.frame, textvariable=self.method_to_grid, width=15, 
                 values=['Least squares', 'Ridge', 'Lasso', 'Random Forest', 'Support Vector',
                     'SGD', 'Nearest Neighbor', 'Gaussian Process', 'Decision Tree',
-                    'Multi-layer Perceptron', 'XGBoost', 'CatBoost'])
+                    'Multi-layer Perceptron', 'XGBoost', 'CatBoost', 'LightGBM'])
             self.combobox1.place(x=110,y=12)
 
             ttk.Label(self.frame, text='n jobs', font=myfont1).place(x=250, y=10)
@@ -338,49 +345,18 @@ class rgr_app:
                             gc.fit(prev.X_St, prev.y)
                         else:
                             gc.fit(prev.X, prev.y)
-
-                        # experimental stuff for hyperopt
-                        # XX = np.array(prev.X)
-                        # yy = np.array(prev.y)
-
-                        # from sklearn.model_selection import train_test_split
-                        # from sklearn.metrics import mean_squared_error
-                        # from hpsklearn import HyperoptEstimator
-                        # from hyperopt import tpe
-                        # from xgboost import XGBRegressor
-                        # X_train, X_test, y_train, y_test = train_test_split(XX, yy, 
-                        #     test_size=0.33, random_state=1)
-                        # # xgbr = XGBRegressor(booster='gbtree', colsample_bylevel=1,
-                        # #     colsample_bynode=1, colsample_bytree=0.8, gamma=0, gpu_id=0,
-                        # #     importance_type='gain', interaction_constraints='',
-                        # #     learning_rate=0.01, max_delta_step=0, max_depth=8,
-                        # #     min_child_weight=1, missing=nan, monotone_constraints='()',
-                        # #     n_estimators=200, n_jobs=4, num_parallel_tree=1, random_state=0,
-                        # #     reg_alpha=0, reg_lambda=1, scale_pos_weight=1, subsample=1,
-                        # #     tree_method='gpu_hist', validate_parameters=1, verbosity=None)
-
-                        # xgbr = XGBRegressor(booster='gbtree', colsample_bylevel=1,
-                        #     colsample_bynode=1, colsample_bytree=0.8, gpu_id=0,
-                        #     importance_type='gain', interaction_constraints='',
-                        #     learning_rate=0.01, max_delta_step=0, max_depth=8,
-                        #     monotone_constraints='()',
-                        #     n_estimators=200, n_jobs=4, num_parallel_tree=1, random_state=0,
-                        #     subsample=0.66,
-                        #     tree_method='gpu_hist', validate_parameters=1, verbosity=None)
-                        # model = HyperoptEstimator(regressor=xgbr, 
-                        #     loss_fn=mean_squared_error, 
-                        #     algo=tpe.suggest, max_evals=50, trial_timeout=30)
-                        # model.fit(X_train, y_train)
-                        # # summarize performance
-                        # mse = model.score(X_test, y_test)
-                        # print("MSE: %.3f" % mse)
-                        # # summarize the best model
-                        # print(model.best_model())
-                        # results_text.insert('1.0', str(model.best_model()))
-
                     elif method == 'CatBoost':
                         from catboost import CatBoostRegressor
                         gc = GridSearchCV(estimator=CatBoostRegressor(), 
+                            param_grid=eval(param_grid_entry.get("1.0",'end')), 
+                            cv=folds, n_jobs=int(n_jobs_entry.get()), verbose=3)
+                        if prev.x_st_var.get() == 'Yes':
+                            gc.fit(prev.X_St, prev.y)
+                        else:
+                            gc.fit(prev.X, prev.y)
+                    elif method == 'LightGBM':
+                        from lightgbm import LGBMRegressor
+                        gc = GridSearchCV(estimator=LGBMRegressor(), 
                             param_grid=eval(param_grid_entry.get("1.0",'end')), 
                             cv=folds, n_jobs=int(n_jobs_entry.get()), verbose=3)
                         if prev.x_st_var.get() == 'Yes':
@@ -634,11 +610,29 @@ class rgr_app:
         self.cbr_cv_voting_mode = tk.BooleanVar(value=False)
         self.cbr_cv_voting_folds = tk.StringVar(value='5')
 
+        self.lgbmr_include_comp = tk.BooleanVar(value=True)
+        self.lgbmr_boosting_type = tk.StringVar(value='gbdt')
+        self.lgbmr_num_leaves = tk.StringVar(value='31')
+        self.lgbmr_max_depth = tk.StringVar(value='-1')
+        self.lgbmr_learning_rate = tk.StringVar(value='0.1')
+        self.lgbmr_n_estimators = tk.StringVar(value='100')
+        self.lgbmr_subsample_for_bin = tk.StringVar(value='200000')
+        self.lgbmr_min_split_gain = tk.StringVar(value='0.0')
+        self.lgbmr_min_child_weight = tk.StringVar(value='1e-3')
+        self.lgbmr_min_child_samples = tk.StringVar(value='20')
+        self.lgbmr_subsample = tk.StringVar(value='1.0')
+        self.lgbmr_subsample_freq = tk.StringVar(value='0')
+        self.lgbmr_colsample_bytree = tk.StringVar(value='1.0')
+        self.lgbmr_reg_alpha = tk.StringVar(value='0.0')
+        self.lgbmr_reg_lambda = tk.StringVar(value='0.0')
+        self.lgbmr_n_jobs = tk.StringVar(value='-1')
+        self.lgbmr_silent = tk.BooleanVar(value=True)
+        self.lgbmr_categorical_feature = tk.StringVar(value='auto')
         self.lgbmr_eval_metric = tk.StringVar(value='rmse')
         self.lgbmr_early_stopping = tk.BooleanVar(value=False)
         self.lgbmr_n_iter_no_change = tk.StringVar(value='100')
         self.lgbmr_validation_fraction = tk.StringVar(value='0.2')
-        self.lgbmr_cv_voting_mode = tk.BooleanVar(value=True)
+        self.lgbmr_cv_voting_mode = tk.BooleanVar(value=False)
         self.lgbmr_cv_voting_folds = tk.StringVar(value='5')
 
         # flag for stopping comparison
@@ -660,6 +654,9 @@ class rgr_app:
                     except:
                         prev.X = main.data.iloc[:,x_from : x_to]
                         prev.y = main.data[int(self.y_var.get())]
+
+                    prev.X[prev.X.select_dtypes(['object']).columns] = \
+                        prev.X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
                 elif self.handle_cat_var.get()=='Dummies':
                     from sklearn.preprocessing import OneHotEncoder
                     enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
@@ -1351,6 +1348,91 @@ class rgr_app:
                                     self.pb1.step(1)
                                     print('CB Done')
                     self.scores['cbr'] = cbr_scores.mean()
+                # LightGBM
+                if self.lgbmr_include_comp.get() and self.continue_flag:
+                    from lightgbm import LGBMRegressor
+                    lgbmr = LGBMRegressor(
+                        boosting_type=self.lgbmr_boosting_type.get(),
+                        num_leaves=int(self.lgbmr_num_leaves.get()),
+                        max_depth=int(self.lgbmr_max_depth.get()),
+                        learning_rate=float(self.lgbmr_learning_rate.get()),
+                        n_estimators=int(self.lgbmr_n_estimators.get()),
+                        subsample_for_bin=int(self.lgbmr_subsample_for_bin.get()),
+                        min_split_gain=float(self.lgbmr_min_split_gain.get()),
+                        min_child_weight=float(self.lgbmr_min_child_weight.get()),
+                        min_child_samples=int(self.lgbmr_min_child_samples.get()),
+                        subsample=float(self.lgbmr_subsample.get()),
+                        subsample_freq=int(self.lgbmr_subsample_freq.get()),
+                        colsample_bytree=float(self.lgbmr_colsample_bytree.get()),
+                        reg_alpha=float(self.lgbmr_reg_alpha.get()),
+                        reg_lambda=float(self.lgbmr_reg_lambda.get()),
+                        n_jobs=int(self.lgbmr_n_jobs.get()),
+                        silent=self.lgbmr_silent.get(),
+                    )
+                    lgbmr_scores = np.array([])
+                    if self.x_st_var.get() == 'Yes' and self.lgbmr_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X_St, check_val_X_St, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X_St[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbr_validation_fraction.get()), random_state=22)
+                                    lgbmr.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y),
+                                        early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                                        categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmr_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.mean_squared_error(lgbmr.predict(prev.X_St[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmr_scores = np.append(lgbmr_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    elif self.lgbmr_early_stopping.get()==True:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    check_tr_X, check_val_X, check_tr_y, check_val_y = \
+                                        train_test_split(prev.X.iloc[train_index], prev.y[train_index], 
+                                            test_size=float(self.cbr_validation_fraction.get()), random_state=22)
+                                    lgbmr.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y),
+                                        early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
+                                        categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmr_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.mean_squared_error(lgbmr.predict(prev.X.iloc[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmr_scores = np.append(lgbmr_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    elif self.x_st_var.get() == 'Yes' and self.lgbmr_early_stopping.get()==False:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X_St):
+                                if self.continue_flag:
+                                    lgbmr.fit(
+                                        prev.X_St[train_index], prev.y[train_index],
+                                        categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmr_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.mean_squared_error(lgbmr.predict(prev.X_St[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmr_scores = np.append(lgbmr_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    else:
+                        for fold in folds_list:
+                            for train_index, test_index in fold.split(prev.X):
+                                if self.continue_flag:
+                                    lgbmr.fit(
+                                        prev.X.iloc[train_index], prev.y[train_index],
+                                        categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                            else eval(self.lgbmr_categorical_feature.get()))
+                                    )
+                                    score = sklearn.metrics.mean_squared_error(lgbmr.predict(prev.X.iloc[test_index]), 
+                                        prev.y[test_index])
+                                    lgbmr_scores = np.append(lgbmr_scores, score)
+                                    self.pb1.step(1)
+                                    print('LGBM Done')
+                    self.scores['lgbmr'] = lgbmr_scores.mean()
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
             self.continue_flag = True
@@ -1379,7 +1461,8 @@ class rgr_app:
                           self.rfr_include_comp.get(), self.svr_include_comp.get(),
                           self.sgdr_include_comp.get(), self.knr_include_comp.get(),
                           self.gpr_include_comp.get(), self.mlpr_include_comp.get(),
-                          self.xgbr_include_comp.get(), self.cbr_include_comp.get(),]:
+                          self.xgbr_include_comp.get(), self.cbr_include_comp.get(),
+                          self.lgbmr_include_comp.get()]:
                     if x==True:
                         l+=1*int(rep_entry.get())*int(e2.get())
 
@@ -1419,6 +1502,11 @@ class rgr_app:
                         training_X = self.training.data.iloc[:,tr_x_from : tr_x_to]
                         training_y = self.training.data[int(self.y_var.get())]
                     X = self.prediction.data.iloc[:,pr_x_from : pr_x_to]
+
+                    X[X.select_dtypes(['object']).columns] = \
+                        X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
+                    training_X[training_X.select_dtypes(['object']).columns] = \
+                        training_X.select_dtypes(['object']).apply(lambda x: x.astype('category'))
                 elif self.handle_cat_var.get()=='Dummies':
                     from sklearn.preprocessing import OneHotEncoder
                     enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
@@ -1496,6 +1584,9 @@ class rgr_app:
                     pass
                 check_tr_X, check_val_X = train_test_split(training_X, 
                         test_size=float(self.cbr_validation_fraction.get()), random_state=22)
+
+                print(training_X)
+                print(X)
                 # Linear regression
                 if method == 'Least squares':
                     from sklearn.linear_model import LinearRegression
@@ -1927,29 +2018,24 @@ class rgr_app:
                 # LightGBM
                 if method == 'LightGBM':
                     from lightgbm import LGBMRegressor
-                    if self.cbr_use_gpu.get() == False:
-                        lgbmr = LGBMRegressor(
-                            # boosting_type='dart',
-                            num_leaves=80,
-                            n_estimators=5000,
-                            learning_rate=0.01,
-                            silent=False,
-                            subsample=0.66,
-                            colsample_bytree=0.8,
-                            reg_lambda=2.0
-                        )
-                    else:
-                        lgbmr = LGBMRegressor(
-                            # boosting_type='dart',
-                            num_leaves=80,
-                            n_estimators=5000,
-                            learning_rate=0.01,
-                            silent=False,
-                            subsample=0.66,
-                            colsample_bytree=0.8,
-                            reg_lambda=2.0
-                        )
-
+                    lgbmr = LGBMRegressor(
+                        boosting_type=self.lgbmr_boosting_type.get(),
+                        num_leaves=int(self.lgbmr_num_leaves.get()),
+                        max_depth=int(self.lgbmr_max_depth.get()),
+                        learning_rate=float(self.lgbmr_learning_rate.get()),
+                        n_estimators=int(self.lgbmr_n_estimators.get()),
+                        subsample_for_bin=int(self.lgbmr_subsample_for_bin.get()),
+                        min_split_gain=float(self.lgbmr_min_split_gain.get()),
+                        min_child_weight=float(self.lgbmr_min_child_weight.get()),
+                        min_child_samples=int(self.lgbmr_min_child_samples.get()),
+                        subsample=float(self.lgbmr_subsample.get()),
+                        subsample_freq=int(self.lgbmr_subsample_freq.get()),
+                        colsample_bytree=float(self.lgbmr_colsample_bytree.get()),
+                        reg_alpha=float(self.lgbmr_reg_alpha.get()),
+                        reg_lambda=float(self.lgbmr_reg_lambda.get()),
+                        n_jobs=int(self.lgbmr_n_jobs.get()),
+                        silent=self.lgbmr_silent.get(),
+                    )
                     #cv-voting mode
                     if self.x_st_var.get() == 'Yes' and self.lgbmr_cv_voting_mode.get()==True:
                         first_col = True
@@ -1960,12 +2046,12 @@ class rgr_app:
                             lgbmr.fit(X=training_X_St.iloc[train_index], y=training_y[train_index], 
                                 eval_set=[(training_X_St.iloc[test_index], training_y[test_index])], 
                                 early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
-                                # eval_metric=self.lgbmr_eval_metric.get()
-                                eval_metric='l2'
-                                )
+                                categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                    else eval(self.lgbmr_categorical_feature.get()))
+                            )
                             # best_iteration = lgbmr.get_booster().best_ntree_limit
-                            azaza.append(lgbmr.best_score_['l2'])
-                            print(azaza)
+                            # azaza.append(lgbmr.best_score_['l2'].items()[0])
+                            # print(azaza)
                             predict = lgbmr.predict(X_St)
                             if first_col:
                                 pr_values = np.array(predict, ndmin=2)
@@ -1984,12 +2070,12 @@ class rgr_app:
                             lgbmr.fit(X=training_X.iloc[train_index], y=training_y[train_index], 
                                 eval_set=[(training_X.iloc[test_index], training_y[test_index])],
                                 early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
-                                # eval_metric=self.lgbmr_eval_metric.get()
-                                eval_metric='l2'
-                                )
+                                categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                    else eval(self.lgbmr_categorical_feature.get()))
+                            )
                             # best_iteration = lgbmr.get_booster().best_ntree_limit
-                            azaza.append(lgbmr.best_score_['l2'])
-                            print(azaza)
+                            # azaza.append(lgbmr.best_score_['l2'].items()[0])
+                            # print(azaza)
                             predict = lgbmr.predict(X)
                             if first_col:
                                 pr_values = np.array(predict, ndmin=2)
@@ -1998,28 +2084,41 @@ class rgr_app:
                             else:
                                 pr_values = np.insert(pr_values, -1, predict, axis=1)
                         pr_values= np.mean(pr_values, axis=1)
-                        # print(np.mean(azaza))
 
-                    # # early-stopping mode
-                    # elif self.x_st_var.get() == 'Yes' and self.cbr_early_stopping.get()==True:
-                    #     cbr.fit(X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y), 
-                    #         early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
-                    #         use_best_model=True)
-                    #     pr_values = cbr.predict(X_St)
-                    # elif self.cbr_early_stopping.get()==True:
-                    #     cbr.fit(X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y), 
-                    #         early_stopping_rounds=int(self.cbr_n_iter_no_change.get()),
-                    #         use_best_model=True)
-                    #     pr_values = cbr.predict(X)
-
+                    # early-stopping mode
+                    elif self.x_st_var.get() == 'Yes' and self.lgbmr_early_stopping.get()==True:
+                        lgbmr.fit(
+                            X=check_tr_X_St, y=check_tr_y, eval_set=(check_val_X_St, check_val_y), 
+                            early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
+                            categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                else eval(self.lgbmr_categorical_feature.get()))
+                        )
+                        pr_values = lgbmr.predict(X_St)
+                    elif self.lgbmr_early_stopping.get()==True:
+                        lgbmr.fit(
+                            X=check_tr_X, y=check_tr_y, eval_set=(check_val_X, check_val_y), 
+                            early_stopping_rounds=int(self.lgbmr_n_iter_no_change.get()),
+                            categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                else eval(self.lgbmr_categorical_feature.get()))
+                        )
+                        pr_values = lgbmr.predict(X)
                     # standard mode
                     elif self.x_st_var.get() == 'Yes':
-                        lgbmr.fit(training_X_St, training_y)
+                        lgbmr.fit(
+                            training_X_St, training_y,
+                            categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                else eval(self.lgbmr_categorical_feature.get()))
+                        )
                         pr_values = lgbmr.predict(X_St)
                     else:
-                        lgbmr.fit(training_X, training_y)
+                        lgbmr.fit(
+                            training_X, training_y,
+                            categorical_feature=('auto' if self.lgbmr_categorical_feature.get()=='auto'
+                                else eval(self.lgbmr_categorical_feature.get()))
+                        )
                         pr_values = lgbmr.predict(X)
 
+                self.prediction.data = self.prediction.data.drop('Y', axis = 1, errors='ignore')
                 if self.place_result_var.get() == 'Start':
                     self.prediction.data.insert(0, 'Y', pr_values)
                 elif self.place_result_var.get() == 'End':
@@ -2201,14 +2300,16 @@ class rgr_app:
             textvariable=self.prediction.x_to_var, width=14, values=[])
         self.pr_x_to_combobox.place(x=275, y=447)
 
-        ttk.Button(self.frame, text='Predict values', 
+        ttk.Button(self.frame, text='Predict', width=7,
             command=lambda: 
-                try_make_regression()).place(x=420, y=390)
+                try_make_regression(method=self.pr_method.get())).place(x=400, y=395)
+        ttk.Button(self.frame, text='Quit', width=7,
+            command=lambda: quit_back(rgr_app.root, parent)).place(x=400, y=430)
         
-        ttk.Button(self.frame, text='Save results', 
-            command=lambda: save_results(self, self.prediction, 'rgr result')).place(x=420, y=425)
-        ttk.Button(self.frame, text='Quit', 
-                  command=lambda: quit_back(rgr_app.root, parent)).place(x=420, y=460)
+        ttk.Button(self.frame, text='Save to file', width=9,
+            command=lambda: save_results(self, self.prediction, 'rgr result')).place(x=500, y=395)
+        ttk.Button(self.frame, text='Save to sql', width=9,
+            command=lambda: save_to_sql(self, self.prediction, 'rgr_result')).place(x=500, y=430)
 
 # sub-app for methods' specifications  
 class rgr_mtds_specification:
@@ -2226,7 +2327,7 @@ class rgr_mtds_specification:
         self.root.title('Regression methods specification')
 
         self.canvas = tk.Canvas(self.root)
-        self.frame = ttk.Frame(self.canvas, width=1460, height=640)
+        self.frame = ttk.Frame(self.canvas, width=1640, height=640)
         self.scrollbar = ttk.Scrollbar(self.canvas, orient="horizontal", 
             command=self.canvas.xview)
         self.canvas.configure(xscrollcommand=self.scrollbar.set)
@@ -2255,7 +2356,11 @@ class rgr_mtds_specification:
         settings_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         settings_menu.add_command(label='Restore Defaults', 
-            command=lambda: self.restore_defaults(prev))
+            command=lambda: self.restore_defaults(prev, parent))
+        settings_menu.add_command(label='Save settings', 
+            command=lambda: self.save_settings(prev, parent))
+        settings_menu.add_command(label='Load settings', 
+            command=lambda: self.load_settings(prev, parent))
         
         ttk.Label(self.frame, text=' Include in\nComparison', font=myfont_b).place(x=30, y=10)
         ttk.Label(self.frame, text='Least Squares', font=myfont2).place(x=5, y=60)
@@ -2294,11 +2399,14 @@ class rgr_mtds_specification:
         ttk.Label(self.frame, text='CatBoost', font=myfont2).place(x=5, y=300)
         inc_cb12 = ttk.Checkbutton(self.frame, variable=prev.cbr_include_comp, takefocus=False)
         inc_cb12.place(x=120, y=300)
-        ttk.Label(self.frame, text='Scoring', font=myfont2).place(x=5, y=320)
-        inc_combobox1 = ttk.Combobox(self.frame, textvariable=prev.inc_scoring, width=15, 
-            values=['r2', 'neg_mean_squared_error', 'neg_root_mean_squared_error', 
-                'neg_mean_squared_log_error', 'neg_mean_absolute_error'])
-        inc_combobox1.place(x=60,y=323)
+        ttk.Label(self.frame, text='LightGBM', font=myfont2).place(x=5, y=320)
+        inc_cb13 = ttk.Checkbutton(self.frame, variable=prev.lgbmr_include_comp, takefocus=False)
+        inc_cb13.place(x=120, y=320)
+        # ttk.Label(self.frame, text='Scoring', font=myfont2).place(x=5, y=320)
+        # inc_combobox1 = ttk.Combobox(self.frame, textvariable=prev.inc_scoring, width=15, 
+        #     values=['r2', 'neg_mean_squared_error', 'neg_root_mean_squared_error', 
+        #         'neg_mean_squared_log_error', 'neg_mean_absolute_error'])
+        # inc_combobox1.place(x=60,y=323)
 
         ttk.Label(self.frame, text='Least Squares', font=myfont_b).place(x=30, y=350)
         ttk.Label(self.frame, text='Equation type', font=myfont2).place(x=5, y=380)
@@ -2727,10 +2835,10 @@ class rgr_mtds_specification:
         xgb_e6 = ttk.Entry(self.frame, 
             textvariable=prev.xgbr_colsample_bytree, font=myfont2, width=7)
         xgb_e6.place(x=1165,y=140)
-        ttk.Label(self.frame, text='Lambda', font=myfont2).place(x=1055, y=160)
+        ttk.Label(self.frame, text='Reg Lambda', font=myfont2).place(x=1055, y=160)
         xgb_e7 = ttk.Entry(self.frame, textvariable=prev.xgbr_lambda, font=myfont2, width=7)
         xgb_e7.place(x=1165,y=160)
-        ttk.Label(self.frame, text='Alpha', font=myfont2).place(x=1055, y=180)
+        ttk.Label(self.frame, text='Reg Alpha', font=myfont2).place(x=1055, y=180)
         xgb_e8 = ttk.Entry(self.frame, textvariable=prev.xgbr_alpha, font=myfont2, width=7)
         xgb_e8.place(x=1165,y=180)
         ttk.Label(self.frame, text='n estimators', font=myfont2).place(x=1055, y=200)
@@ -2752,7 +2860,7 @@ class rgr_mtds_specification:
         ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1055, y=300)
         xgb_e11 = ttk.Entry(self.frame, textvariable=prev.xgbr_validation_fraction, font=myfont2, width=7)
         xgb_e11.place(x=1165,y=300)
-        ttk.Label(self.frame, text='CV-voting mode', font=myfont2).place(x=1055, y=320)
+        ttk.Label(self.frame, text='CV-avg mode', font=myfont2).place(x=1055, y=320)
         xgb_cb4 = ttk.Checkbutton(self.frame, variable=prev.xgbr_cv_voting_mode, takefocus=False)
         xgb_cb4.place(x=1165, y=320)
         ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1055, y=340)
@@ -2773,7 +2881,7 @@ class rgr_mtds_specification:
         ttk.Label(self.frame, text='Depth', font=myfont2).place(x=1235, y=100)
         cb_e3 = ttk.Entry(self.frame, textvariable=prev.cbr_depth, font=myfont2, width=7)
         cb_e3.place(x=1345,y=100)
-        ttk.Label(self.frame, text='Lambda', font=myfont2).place(x=1235, y=120)
+        ttk.Label(self.frame, text='Reg Lambda', font=myfont2).place(x=1235, y=120)
         cb_e4 = ttk.Entry(self.frame, textvariable=prev.cbr_reg_lambda, font=myfont2, width=7)
         cb_e4.place(x=1345,y=120)
         ttk.Label(self.frame, text='Subsample', font=myfont2).place(x=1235, y=140)
@@ -2790,7 +2898,7 @@ class rgr_mtds_specification:
         cb_cb2 = ttk.Checkbutton(self.frame, variable=prev.cbr_use_gpu, takefocus=False)
         cb_cb2.place(x=1345, y=200)
         ttk.Label(self.frame, text='cat_features list', font=myfont2).place(x=1235, y=220)
-        cb_e8 = ttk.Entry(self.frame, textvariable=prev.cbr_cf_list, font=myfont2, width=10)
+        cb_e8 = ttk.Entry(self.frame, textvariable=prev.cbr_cf_list, font=myfont2, width=9)
         cb_e8.place(x=1340,y=220)
         ttk.Label(self.frame, text='Early stopping', font=myfont2).place(x=1235, y=240)
         cb_cb3 = ttk.Checkbutton(self.frame, variable=prev.cbr_early_stopping, takefocus=False)
@@ -2801,190 +2909,507 @@ class rgr_mtds_specification:
         ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1235, y=280)
         cb_e10 = ttk.Entry(self.frame, textvariable=prev.cbr_validation_fraction, font=myfont2, width=7)
         cb_e10.place(x=1345,y=280)
-        ttk.Label(self.frame, text='CV-voting mode', font=myfont2).place(x=1235, y=300)
+        ttk.Label(self.frame, text='CV-avg mode', font=myfont2).place(x=1235, y=300)
         cb_cb4 = ttk.Checkbutton(self.frame, variable=prev.cbr_cv_voting_mode, takefocus=False)
         cb_cb4.place(x=1345, y=300)
         ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1235, y=320)
         cb_e11 = ttk.Entry(self.frame, textvariable=prev.cbr_cv_voting_folds, font=myfont2, width=7)
         cb_e11.place(x=1345,y=320)
+
+        ttk.Label(self.frame, text='LightGBM', font=myfont_b).place(x=1445, y=10)
+        ttk.Label(self.frame, text='Boosting type', font=myfont2).place(x=1415, y=40)
+        lgb_combobox1 = ttk.Combobox(self.frame, textvariable=prev.lgbmr_boosting_type, width=7, 
+            values=['gbdt', 'dart', 'goss', 'rf'])
+        lgb_combobox1.place(x=1525,y=40)
+        ttk.Label(self.frame, text='Num leaves', font=myfont2).place(x=1415, y=60)
+        lgb_e1 = ttk.Entry(self.frame, textvariable=prev.lgbmr_num_leaves, font=myfont2, width=7)
+        lgb_e1.place(x=1525,y=60)
+        ttk.Label(self.frame, text='Max depth', font=myfont2).place(x=1415, y=80)
+        lgb_e2 = ttk.Entry(self.frame, textvariable=prev.lgbmr_max_depth, font=myfont2, width=7)
+        lgb_e2.place(x=1525,y=80)
+        ttk.Label(self.frame, text='Learning rate', font=myfont2).place(x=1415, y=100)
+        lgb_e3 = ttk.Entry(self.frame, textvariable=prev.lgbmr_learning_rate, font=myfont2, width=7)
+        lgb_e3.place(x=1525,y=100)
+        ttk.Label(self.frame, text='Iterations', font=myfont2).place(x=1415, y=120)
+        lgb_e4 = ttk.Entry(self.frame, textvariable=prev.lgbmr_n_estimators, font=myfont2, width=7)
+        lgb_e4.place(x=1525,y=120)
+        ttk.Label(self.frame, text='Subsample for bin', font=myfont2).place(x=1415, y=140)
+        lgb_e5 = ttk.Entry(self.frame, textvariable=prev.lgbmr_subsample_for_bin, font=myfont2, width=7)
+        lgb_e5.place(x=1525,y=140)
+        ttk.Label(self.frame, text='Min split gain', font=myfont2).place(x=1415, y=160)
+        lgb_e6 = ttk.Entry(self.frame, textvariable=prev.lgbmr_min_split_gain, font=myfont2, width=7)
+        lgb_e6.place(x=1525,y=160)
+        ttk.Label(self.frame, text='Min child weight', font=myfont2).place(x=1415, y=180)
+        lgb_e7 = ttk.Entry(self.frame, textvariable=prev.lgbmr_min_child_weight, font=myfont2, width=7)
+        lgb_e7.place(x=1525,y=180)
+        ttk.Label(self.frame, text='Min child samples', font=myfont2).place(x=1415, y=200)
+        lgb_e8 = ttk.Entry(self.frame, textvariable=prev.lgbmr_min_child_samples, font=myfont2, width=7)
+        lgb_e8.place(x=1525,y=200)
+        ttk.Label(self.frame, text='Subsample', font=myfont2).place(x=1415, y=220)
+        lgb_e9 = ttk.Entry(self.frame, textvariable=prev.lgbmr_subsample, font=myfont2, width=7)
+        lgb_e9.place(x=1525,y=220)
+        ttk.Label(self.frame, text='Subsample freq', font=myfont2).place(x=1415, y=240)
+        lgb_e10 = ttk.Entry(self.frame, textvariable=prev.lgbmr_subsample_freq, font=myfont2, width=7)
+        lgb_e10.place(x=1525,y=240)
+        ttk.Label(self.frame, text='Colsample bytree', font=myfont2).place(x=1415, y=260)
+        lgb_e11 = ttk.Entry(self.frame, textvariable=prev.lgbmr_colsample_bytree, font=myfont2, width=7)
+        lgb_e11.place(x=1525,y=260)
+        ttk.Label(self.frame, text='Reg alpha', font=myfont2).place(x=1415, y=280)
+        lgb_e12 = ttk.Entry(self.frame, textvariable=prev.lgbmr_reg_alpha, font=myfont2, width=7)
+        lgb_e12.place(x=1525,y=280)
+        ttk.Label(self.frame, text='Reg lambda', font=myfont2).place(x=1415, y=300)
+        lgb_e13 = ttk.Entry(self.frame, textvariable=prev.lgbmr_reg_lambda, font=myfont2, width=7)
+        lgb_e13.place(x=1525,y=300)
+        ttk.Label(self.frame, text='n jobs', font=myfont2).place(x=1415, y=320)
+        lgb_e14 = ttk.Entry(self.frame, textvariable=prev.lgbmr_n_jobs, font=myfont2, width=7)
+        lgb_e14.place(x=1525,y=320)
+        ttk.Label(self.frame, text='silent', font=myfont2).place(x=1415, y=340)
+        lgb_cb1 = ttk.Checkbutton(self.frame, variable=prev.lgbmr_silent, takefocus=False)
+        lgb_cb1.place(x=1525, y=340)
+        ttk.Label(self.frame, text='cat_features list', font=myfont2).place(x=1415, y=360)
+        lgb_e15 = ttk.Entry(self.frame, textvariable=prev.lgbmr_categorical_feature, font=myfont2, width=9)
+        lgb_e15.place(x=1520,y=360)
+        ttk.Label(self.frame, text='Early stopping', font=myfont2).place(x=1415, y=380)
+        lgb_cb2 = ttk.Checkbutton(self.frame, variable=prev.lgbmr_early_stopping, takefocus=False)
+        lgb_cb2.place(x=1525, y=380)
+        ttk.Label(self.frame, text='n iter no change', font=myfont2).place(x=1415, y=400)
+        lgb_e16 = ttk.Entry(self.frame, textvariable=prev.lgbmr_n_iter_no_change, font=myfont2, width=7)
+        lgb_e16.place(x=1525,y=400)
+        ttk.Label(self.frame, text='Validation fraction', font=myfont2).place(x=1415, y=420)
+        lgb_e17 = ttk.Entry(self.frame, textvariable=prev.lgbmr_validation_fraction, font=myfont2, width=7)
+        lgb_e17.place(x=1525,y=420)
+        ttk.Label(self.frame, text='CV-avg mode', font=myfont2).place(x=1415, y=440)
+        lgb_cb3 = ttk.Checkbutton(self.frame, variable=prev.lgbmr_cv_voting_mode, takefocus=False)
+        lgb_cb3.place(x=1525, y=440)
+        ttk.Label(self.frame, text='Number of folds', font=myfont2).place(x=1415, y=460)
+        lgb_e18 = ttk.Entry(self.frame, textvariable=prev.lgbmr_cv_voting_folds, font=myfont2, width=7)
+        lgb_e18.place(x=1525,y=460)
         
         ttk.Button(self.root, text='OK', 
-            command=lambda: quit_back(self.root, rgr_app.root)).place(relx=0.85, rely=0.92)
+            command=lambda: quit_back(self.root, rgr_app.root)).place(relx=0.82, rely=0.92)
 
     # function to restore default parameters
-    def restore_defaults(self, prev):
-        prev.inc_scoring = tk.StringVar(value='r2')
-        prev.lr_include_comp = tk.BooleanVar(value=True)
-        prev.lr_function_type = tk.StringVar(value='Linear')
-        prev.lr_fit_intercept = tk.BooleanVar(value=True)
-        prev.lr_normalize = tk.BooleanVar(value=False)
-        prev.lr_copy_X = tk.BooleanVar(value=True)
-        prev.lr_n_jobs = tk.StringVar(value='None')
-        prev.lr_positive = tk.BooleanVar(value=False)
-        
-        prev.rr_include_comp = tk.BooleanVar(value=True)
-        prev.rr_alpha = tk.StringVar(value='1.0')
-        prev.rr_fit_intercept = tk.BooleanVar(value=True)
-        prev.rr_normalize = tk.BooleanVar(value=False)
-        prev.rr_copy_X = tk.BooleanVar(value=True)
-        prev.rr_max_iter = tk.StringVar(value='None')
-        prev.rr_tol = tk.StringVar(value='1e-3')
-        prev.rr_solver = tk.StringVar(value='auto')
-        prev.rr_random_state = tk.StringVar(value='None')
-        
-        prev.lassor_include_comp = tk.BooleanVar(value=True)
-        prev.lassor_alpha = tk.StringVar(value='1.0')
-        prev.lassor_fit_intercept = tk.BooleanVar(value=True)
-        prev.lassor_normalize = tk.BooleanVar(value=False)
-        prev.lassor_precompute = tk.BooleanVar(value=False)
-        prev.lassor_copy_X = tk.BooleanVar(value=True)
-        prev.lassor_max_iter = tk.StringVar(value='1000')
-        prev.lassor_tol = tk.StringVar(value='1e-4')
-        prev.lassor_warm_start = tk.BooleanVar(value=False)
-        prev.lassor_positive = tk.BooleanVar(value=False)
-        prev.lassor_random_state = tk.StringVar(value='None')
-        prev.lassor_selection = tk.StringVar(value='cyclic')
-        
-        prev.rfr_include_comp = tk.BooleanVar(value=True)
-        prev.rfr_n_estimators = tk.StringVar(value='100')
-        prev.rfr_criterion = tk.StringVar(value='mse')
-        prev.rfr_max_depth = tk.StringVar(value='None')
-        prev.rfr_min_samples_split = tk.StringVar(value='2')
-        prev.rfr_min_samples_leaf = tk.StringVar(value='1')
-        prev.rfr_min_weight_fraction_leaf = tk.StringVar(value='0.0')
-        prev.rfr_max_features = tk.StringVar(value='auto')
-        prev.rfr_max_leaf_nodes = tk.StringVar(value='None')
-        prev.rfr_min_impurity_decrease = tk.StringVar(value='0.0')
-        prev.rfr_bootstrap = tk.BooleanVar(value=True)
-        prev.rfr_oob_score = tk.BooleanVar(value=False)
-        prev.rfr_n_jobs = tk.StringVar(value='3')
-        prev.rfr_random_state = tk.StringVar(value='None')
-        prev.rfr_verbose = tk.StringVar(value='0')
-        prev.rfr_warm_start = tk.BooleanVar(value=False)
-        prev.rfr_ccp_alpha = tk.StringVar(value='0.0')
-        prev.rfr_max_samples = tk.StringVar(value='None')
-        
-        prev.svr_include_comp = tk.BooleanVar(value=True)
-        prev.svr_kernel = tk.StringVar(value='rbf')
-        prev.svr_degree = tk.StringVar(value='3')
-        prev.svr_gamma = tk.StringVar(value='scale')
-        prev.svr_coef0 = tk.StringVar(value='0.0')
-        prev.svr_tol = tk.StringVar(value='1e-3')
-        prev.svr_C = tk.StringVar(value='1.0')
-        prev.svr_epsilon = tk.StringVar(value='0.1')
-        prev.svr_shrinking = tk.BooleanVar(value=True)
-        prev.svr_cache_size = tk.StringVar(value='200')
-        prev.svr_verbose = tk.BooleanVar(value=False)
-        prev.svr_max_iter = tk.StringVar(value='-1')
-        
-        prev.sgdr_include_comp = tk.BooleanVar(value=True)
-        prev.sgdr_loss = tk.StringVar(value='squared_loss')
-        prev.sgdr_penalty = tk.StringVar(value='l2')
-        prev.sgdr_alpha = tk.StringVar(value='0.0001')
-        prev.sgdr_l1_ratio = tk.StringVar(value='0.15')
-        prev.sgdr_fit_intercept = tk.BooleanVar(value=True)
-        prev.sgdr_max_iter = tk.StringVar(value='1000')
-        prev.sgdr_tol = tk.StringVar(value='1e-3')
-        prev.sgdr_shuffle = tk.BooleanVar(value=True)
-        prev.sgdr_verbose = tk.StringVar(value='0')
-        prev.sgdr_epsilon = tk.StringVar(value='0.1')
-        prev.sgdr_random_state = tk.StringVar(value='None')
-        prev.sgdr_learning_rate = tk.StringVar(value='invscaling')
-        prev.sgdr_eta0 = tk.StringVar(value='0.01')
-        prev.sgdr_power_t = tk.StringVar(value='0.25')
-        prev.sgdr_early_stopping = tk.BooleanVar(value=False)
-        prev.sgdr_validation_fraction = tk.StringVar(value='0.1')
-        prev.sgdr_n_iter_no_change = tk.StringVar(value='5')
-        prev.sgdr_warm_start = tk.BooleanVar(value=False)
-        prev.sgdr_average = tk.StringVar(value='False')
-        
-        prev.knr_include_comp = tk.BooleanVar(value=True)
-        prev.knr_n_neighbors = tk.StringVar(value='5')
-        prev.knr_weights = tk.StringVar(value='uniform')
-        prev.knr_algorithm = tk.StringVar(value='auto')
-        prev.knr_leaf_size = tk.StringVar(value='30')
-        prev.knr_p = tk.StringVar(value='2')
-        prev.knr_metric = tk.StringVar(value='minkowski')
-        prev.knr_n_jobs = tk.StringVar(value='None')
-        
-        prev.gpr_include_comp = tk.BooleanVar(value=True)
-        prev.gpr_alpha = tk.StringVar(value='1e-10')
-        prev.gpr_n_restarts_optimizer = tk.StringVar(value='0')
-        prev.gpr_normalize_y = tk.BooleanVar(value=True)
-        prev.gpr_copy_X_train = tk.BooleanVar(value=True)
-        prev.gpr_random_state = tk.StringVar(value='None')
-        
-        prev.dtr_include_comp = tk.BooleanVar(value=True)
-        prev.dtr_criterion = tk.StringVar(value='mse')
-        prev.dtr_splitter = tk.StringVar(value='best')
-        prev.dtr_max_depth = tk.StringVar(value='None')
-        prev.dtr_min_samples_split = tk.StringVar(value='2')
-        prev.dtr_min_samples_leaf = tk.StringVar(value='1')
-        prev.dtr_min_weight_fraction_leaf = tk.StringVar(value='0.0')
-        prev.dtr_max_features = tk.StringVar(value='None')
-        prev.dtr_random_state = tk.StringVar(value='None')
-        prev.dtr_max_leaf_nodes = tk.StringVar(value='None')
-        prev.dtr_min_impurity_decrease = tk.StringVar(value='0.0')
-        prev.dtr_ccp_alpha = tk.StringVar(value='0.0')
-        
-        prev.mlpr_include_comp = tk.BooleanVar(value=True)
-        prev.mlpr_hidden_layer_sizes = tk.StringVar(value='(100,)')
-        prev.mlpr_activation = tk.StringVar(value='relu')
-        prev.mlpr_solver = tk.StringVar(value='adam')
-        prev.mlpr_alpha = tk.StringVar(value='0.0001')
-        prev.mlpr_batch_size = tk.StringVar(value='auto')
-        prev.mlpr_learning_rate = tk.StringVar(value='constant')
-        prev.mlpr_learning_rate_init = tk.StringVar(value='0.001')
-        prev.mlpr_power_t = tk.StringVar(value='0.5')
-        prev.mlpr_max_iter = tk.StringVar(value='200')
-        prev.mlpr_shuffle = tk.BooleanVar(value=True)
-        prev.mlpr_random_state = tk.StringVar(value='None')
-        prev.mlpr_tol = tk.StringVar(value='1e-4')
-        prev.mlpr_verbose = tk.BooleanVar(value=False)
-        prev.mlpr_warm_start = tk.BooleanVar(value=False)
-        prev.mlpr_momentum = tk.StringVar(value='0.9')
-        prev.mlpr_nesterovs_momentum = tk.BooleanVar(value=True)
-        prev.mlpr_early_stopping = tk.BooleanVar(value=False)
-        prev.mlpr_validation_fraction = tk.StringVar(value='0.1')
-        prev.mlpr_beta_1 = tk.StringVar(value='0.9')
-        prev.mlpr_beta_2 = tk.StringVar(value='0.999')
-        prev.mlpr_epsilon = tk.StringVar(value='1e-8')
-        prev.mlpr_n_iter_no_change = tk.StringVar(value='10')
-        prev.mlpr_max_fun = tk.StringVar(value='15000')
+    def restore_defaults(self, prev, parent):
+        if tk.messagebox.askyesno("Restore", "Restore default settings?"):
+            prev.inc_scoring = tk.StringVar(value='r2')
+            prev.lr_include_comp = tk.BooleanVar(value=True)
+            prev.lr_function_type = tk.StringVar(value='Linear')
+            prev.lr_fit_intercept = tk.BooleanVar(value=True)
+            prev.lr_normalize = tk.BooleanVar(value=False)
+            prev.lr_copy_X = tk.BooleanVar(value=True)
+            prev.lr_n_jobs = tk.StringVar(value='None')
+            prev.lr_positive = tk.BooleanVar(value=False)
+            
+            prev.rr_include_comp = tk.BooleanVar(value=True)
+            prev.rr_alpha = tk.StringVar(value='1.0')
+            prev.rr_fit_intercept = tk.BooleanVar(value=True)
+            prev.rr_normalize = tk.BooleanVar(value=False)
+            prev.rr_copy_X = tk.BooleanVar(value=True)
+            prev.rr_max_iter = tk.StringVar(value='None')
+            prev.rr_tol = tk.StringVar(value='1e-3')
+            prev.rr_solver = tk.StringVar(value='auto')
+            prev.rr_random_state = tk.StringVar(value='None')
+            
+            prev.lassor_include_comp = tk.BooleanVar(value=True)
+            prev.lassor_alpha = tk.StringVar(value='1.0')
+            prev.lassor_fit_intercept = tk.BooleanVar(value=True)
+            prev.lassor_normalize = tk.BooleanVar(value=False)
+            prev.lassor_precompute = tk.BooleanVar(value=False)
+            prev.lassor_copy_X = tk.BooleanVar(value=True)
+            prev.lassor_max_iter = tk.StringVar(value='1000')
+            prev.lassor_tol = tk.StringVar(value='1e-4')
+            prev.lassor_warm_start = tk.BooleanVar(value=False)
+            prev.lassor_positive = tk.BooleanVar(value=False)
+            prev.lassor_random_state = tk.StringVar(value='None')
+            prev.lassor_selection = tk.StringVar(value='cyclic')
+            
+            prev.rfr_include_comp = tk.BooleanVar(value=True)
+            prev.rfr_n_estimators = tk.StringVar(value='100')
+            prev.rfr_criterion = tk.StringVar(value='mse')
+            prev.rfr_max_depth = tk.StringVar(value='None')
+            prev.rfr_min_samples_split = tk.StringVar(value='2')
+            prev.rfr_min_samples_leaf = tk.StringVar(value='1')
+            prev.rfr_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+            prev.rfr_max_features = tk.StringVar(value='auto')
+            prev.rfr_max_leaf_nodes = tk.StringVar(value='None')
+            prev.rfr_min_impurity_decrease = tk.StringVar(value='0.0')
+            prev.rfr_bootstrap = tk.BooleanVar(value=True)
+            prev.rfr_oob_score = tk.BooleanVar(value=False)
+            prev.rfr_n_jobs = tk.StringVar(value='3')
+            prev.rfr_random_state = tk.StringVar(value='None')
+            prev.rfr_verbose = tk.StringVar(value='0')
+            prev.rfr_warm_start = tk.BooleanVar(value=False)
+            prev.rfr_ccp_alpha = tk.StringVar(value='0.0')
+            prev.rfr_max_samples = tk.StringVar(value='None')
+            
+            prev.svr_include_comp = tk.BooleanVar(value=True)
+            prev.svr_kernel = tk.StringVar(value='rbf')
+            prev.svr_degree = tk.StringVar(value='3')
+            prev.svr_gamma = tk.StringVar(value='scale')
+            prev.svr_coef0 = tk.StringVar(value='0.0')
+            prev.svr_tol = tk.StringVar(value='1e-3')
+            prev.svr_C = tk.StringVar(value='1.0')
+            prev.svr_epsilon = tk.StringVar(value='0.1')
+            prev.svr_shrinking = tk.BooleanVar(value=True)
+            prev.svr_cache_size = tk.StringVar(value='200')
+            prev.svr_verbose = tk.BooleanVar(value=False)
+            prev.svr_max_iter = tk.StringVar(value='-1')
+            
+            prev.sgdr_include_comp = tk.BooleanVar(value=True)
+            prev.sgdr_loss = tk.StringVar(value='squared_loss')
+            prev.sgdr_penalty = tk.StringVar(value='l2')
+            prev.sgdr_alpha = tk.StringVar(value='0.0001')
+            prev.sgdr_l1_ratio = tk.StringVar(value='0.15')
+            prev.sgdr_fit_intercept = tk.BooleanVar(value=True)
+            prev.sgdr_max_iter = tk.StringVar(value='1000')
+            prev.sgdr_tol = tk.StringVar(value='1e-3')
+            prev.sgdr_shuffle = tk.BooleanVar(value=True)
+            prev.sgdr_verbose = tk.StringVar(value='0')
+            prev.sgdr_epsilon = tk.StringVar(value='0.1')
+            prev.sgdr_random_state = tk.StringVar(value='None')
+            prev.sgdr_learning_rate = tk.StringVar(value='invscaling')
+            prev.sgdr_eta0 = tk.StringVar(value='0.01')
+            prev.sgdr_power_t = tk.StringVar(value='0.25')
+            prev.sgdr_early_stopping = tk.BooleanVar(value=False)
+            prev.sgdr_validation_fraction = tk.StringVar(value='0.1')
+            prev.sgdr_n_iter_no_change = tk.StringVar(value='5')
+            prev.sgdr_warm_start = tk.BooleanVar(value=False)
+            prev.sgdr_average = tk.StringVar(value='False')
+            
+            prev.knr_include_comp = tk.BooleanVar(value=True)
+            prev.knr_n_neighbors = tk.StringVar(value='5')
+            prev.knr_weights = tk.StringVar(value='uniform')
+            prev.knr_algorithm = tk.StringVar(value='auto')
+            prev.knr_leaf_size = tk.StringVar(value='30')
+            prev.knr_p = tk.StringVar(value='2')
+            prev.knr_metric = tk.StringVar(value='minkowski')
+            prev.knr_n_jobs = tk.StringVar(value='None')
+            
+            prev.gpr_include_comp = tk.BooleanVar(value=True)
+            prev.gpr_alpha = tk.StringVar(value='1e-10')
+            prev.gpr_n_restarts_optimizer = tk.StringVar(value='0')
+            prev.gpr_normalize_y = tk.BooleanVar(value=True)
+            prev.gpr_copy_X_train = tk.BooleanVar(value=True)
+            prev.gpr_random_state = tk.StringVar(value='None')
+            
+            prev.dtr_include_comp = tk.BooleanVar(value=True)
+            prev.dtr_criterion = tk.StringVar(value='mse')
+            prev.dtr_splitter = tk.StringVar(value='best')
+            prev.dtr_max_depth = tk.StringVar(value='None')
+            prev.dtr_min_samples_split = tk.StringVar(value='2')
+            prev.dtr_min_samples_leaf = tk.StringVar(value='1')
+            prev.dtr_min_weight_fraction_leaf = tk.StringVar(value='0.0')
+            prev.dtr_max_features = tk.StringVar(value='None')
+            prev.dtr_random_state = tk.StringVar(value='None')
+            prev.dtr_max_leaf_nodes = tk.StringVar(value='None')
+            prev.dtr_min_impurity_decrease = tk.StringVar(value='0.0')
+            prev.dtr_ccp_alpha = tk.StringVar(value='0.0')
+            
+            prev.mlpr_include_comp = tk.BooleanVar(value=True)
+            prev.mlpr_hidden_layer_sizes = tk.StringVar(value='(100,)')
+            prev.mlpr_activation = tk.StringVar(value='relu')
+            prev.mlpr_solver = tk.StringVar(value='adam')
+            prev.mlpr_alpha = tk.StringVar(value='0.0001')
+            prev.mlpr_batch_size = tk.StringVar(value='auto')
+            prev.mlpr_learning_rate = tk.StringVar(value='constant')
+            prev.mlpr_learning_rate_init = tk.StringVar(value='0.001')
+            prev.mlpr_power_t = tk.StringVar(value='0.5')
+            prev.mlpr_max_iter = tk.StringVar(value='200')
+            prev.mlpr_shuffle = tk.BooleanVar(value=True)
+            prev.mlpr_random_state = tk.StringVar(value='None')
+            prev.mlpr_tol = tk.StringVar(value='1e-4')
+            prev.mlpr_verbose = tk.BooleanVar(value=False)
+            prev.mlpr_warm_start = tk.BooleanVar(value=False)
+            prev.mlpr_momentum = tk.StringVar(value='0.9')
+            prev.mlpr_nesterovs_momentum = tk.BooleanVar(value=True)
+            prev.mlpr_early_stopping = tk.BooleanVar(value=False)
+            prev.mlpr_validation_fraction = tk.StringVar(value='0.1')
+            prev.mlpr_beta_1 = tk.StringVar(value='0.9')
+            prev.mlpr_beta_2 = tk.StringVar(value='0.999')
+            prev.mlpr_epsilon = tk.StringVar(value='1e-8')
+            prev.mlpr_n_iter_no_change = tk.StringVar(value='10')
+            prev.mlpr_max_fun = tk.StringVar(value='15000')
 
-        prev.xgbr_include_comp = tk.BooleanVar(value=True)
-        prev.xgbr_n_estimators = tk.StringVar(value='1000')
-        prev.xgbr_eta = tk.StringVar(value='0.1')
-        prev.xgbr_min_child_weight = tk.StringVar(value='1')
-        prev.xgbr_max_depth = tk.StringVar(value='6')
-        prev.xgbr_gamma = tk.StringVar(value='1')
-        prev.xgbr_subsample = tk.StringVar(value='1.0')
-        prev.xgbr_colsample_bytree = tk.StringVar(value='1.0')
-        prev.xgbr_lambda = tk.StringVar(value='1.0')
-        prev.xgbr_alpha = tk.StringVar(value='0.0')
-        prev.xgbr_use_gpu = tk.BooleanVar(value=False)
-        prev.xgbr_eval_metric = tk.StringVar(value='rmse')
-        prev.xgbr_early_stopping = tk.BooleanVar(value=False)
-        prev.xgbr_n_iter_no_change = tk.StringVar(value='100')
-        prev.xgbr_validation_fraction = tk.StringVar(value='0.2')
-        prev.xgbr_cv_voting_mode = tk.BooleanVar(value=False)
-        prev.xgbr_cv_voting_folds = tk.StringVar(value='5')
+            prev.xgbr_include_comp = tk.BooleanVar(value=True)
+            prev.xgbr_n_estimators = tk.StringVar(value='1000')
+            prev.xgbr_eta = tk.StringVar(value='0.1')
+            prev.xgbr_min_child_weight = tk.StringVar(value='1')
+            prev.xgbr_max_depth = tk.StringVar(value='6')
+            prev.xgbr_gamma = tk.StringVar(value='1')
+            prev.xgbr_subsample = tk.StringVar(value='1.0')
+            prev.xgbr_colsample_bytree = tk.StringVar(value='1.0')
+            prev.xgbr_lambda = tk.StringVar(value='1.0')
+            prev.xgbr_alpha = tk.StringVar(value='0.0')
+            prev.xgbr_use_gpu = tk.BooleanVar(value=False)
+            prev.xgbr_eval_metric = tk.StringVar(value='rmse')
+            prev.xgbr_early_stopping = tk.BooleanVar(value=False)
+            prev.xgbr_n_iter_no_change = tk.StringVar(value='100')
+            prev.xgbr_validation_fraction = tk.StringVar(value='0.2')
+            prev.xgbr_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.xgbr_cv_voting_folds = tk.StringVar(value='5')
 
-        prev.cbr_include_comp = tk.BooleanVar(value=True)
-        prev.cbr_eval_metric = tk.StringVar(value='RMSE')
-        prev.cbr_iterations = tk.StringVar(value='1000')
-        prev.cbr_learning_rate = tk.StringVar(value='None')
-        prev.cbr_depth = tk.StringVar(value='6')
-        prev.cbr_reg_lambda = tk.StringVar(value='None')
-        prev.cbr_subsample = tk.StringVar(value='None')
-        prev.cbr_colsample_bylevel = tk.StringVar(value='1.0')
-        prev.cbr_random_strength = tk.StringVar(value='1.0')
-        prev.cbr_use_gpu = tk.BooleanVar(value=False)
-        prev.cbr_cf_list = tk.StringVar(value='[]')
-        prev.cbr_early_stopping = tk.BooleanVar(value=False)
-        prev.cbr_n_iter_no_change = tk.StringVar(value='100')
-        prev.cbr_validation_fraction = tk.StringVar(value='0.2')
-        prev.cbr_cv_voting_mode = tk.BooleanVar(value=False)
-        prev.cbr_cv_voting_folds = tk.StringVar(value='5')
+            prev.cbr_include_comp = tk.BooleanVar(value=True)
+            prev.cbr_eval_metric = tk.StringVar(value='RMSE')
+            prev.cbr_iterations = tk.StringVar(value='1000')
+            prev.cbr_learning_rate = tk.StringVar(value='None')
+            prev.cbr_depth = tk.StringVar(value='6')
+            prev.cbr_reg_lambda = tk.StringVar(value='None')
+            prev.cbr_subsample = tk.StringVar(value='None')
+            prev.cbr_colsample_bylevel = tk.StringVar(value='1.0')
+            prev.cbr_random_strength = tk.StringVar(value='1.0')
+            prev.cbr_use_gpu = tk.BooleanVar(value=False)
+            prev.cbr_cf_list = tk.StringVar(value='[]')
+            prev.cbr_early_stopping = tk.BooleanVar(value=False)
+            prev.cbr_n_iter_no_change = tk.StringVar(value='100')
+            prev.cbr_validation_fraction = tk.StringVar(value='0.2')
+            prev.cbr_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.cbr_cv_voting_folds = tk.StringVar(value='5')
+
+            prev.lgbmr_include_comp = tk.BooleanVar(value=True)
+            prev.lgbmr_boosting_type = tk.StringVar(value='gbdt')
+            prev.lgbmr_num_leaves = tk.StringVar(value='31')
+            prev.lgbmr_max_depth = tk.StringVar(value='-1')
+            prev.lgbmr_learning_rate = tk.StringVar(value='0.1')
+            prev.lgbmr_n_estimators = tk.StringVar(value='100')
+            prev.lgbmr_subsample_for_bin = tk.StringVar(value='200000')
+            prev.lgbmr_min_split_gain = tk.StringVar(value='0.0')
+            prev.lgbmr_min_child_weight = tk.StringVar(value='1e-3')
+            prev.lgbmr_min_child_samples = tk.StringVar(value='20')
+            prev.lgbmr_subsample = tk.StringVar(value='1.0')
+            prev.lgbmr_subsample_freq = tk.StringVar(value='0')
+            prev.lgbmr_colsample_bytree = tk.StringVar(value='1.0')
+            prev.lgbmr_reg_alpha = tk.StringVar(value='0.0')
+            prev.lgbmr_reg_lambda = tk.StringVar(value='0.0')
+            prev.lgbmr_n_jobs = tk.StringVar(value='-1')
+            prev.lgbmr_silent = tk.BooleanVar(value=True)
+            prev.lgbmr_categorical_feature = tk.StringVar(value='auto')
+            prev.lgbmr_eval_metric = tk.StringVar(value='rmse')
+            prev.lgbmr_early_stopping = tk.BooleanVar(value=False)
+            prev.lgbmr_n_iter_no_change = tk.StringVar(value='100')
+            prev.lgbmr_validation_fraction = tk.StringVar(value='0.2')
+            prev.lgbmr_cv_voting_mode = tk.BooleanVar(value=False)
+            prev.lgbmr_cv_voting_folds = tk.StringVar(value='5')
+
+            quit_back(self.root, prev.root)
+            rgr_mtds_specification(prev, parent)
+
+    def save_settings(self, prev, parent):
+        save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
+            filetypes = (("Text files","*.txt"),)
+            ), 'w')
+        save_file.write(
+            str({
+                'inc_scoring' : prev.inc_scoring.get(),
+                'lr_include_comp' : prev.lr_include_comp.get(),
+                'lr_function_type' : prev.lr_function_type.get(),
+                'lr_fit_intercept' : prev.lr_fit_intercept.get(),
+                'lr_normalize' : prev.lr_normalize.get(),
+                'lr_copy_X' : prev.lr_copy_X.get(),
+                'lr_n_jobs' : prev.lr_n_jobs.get(),
+                'lr_positive' : prev.lr_positive.get(),
+                
+                'rr_include_comp' : prev.rr_include_comp.get(),
+                'rr_alpha' : prev.rr_alpha.get(),
+                'rr_fit_intercept' : prev.rr_fit_intercept.get(),
+                'rr_normalize' : prev.rr_normalize.get(),
+                'rr_copy_X' : prev.rr_copy_X.get(),
+                'rr_max_iter' : prev.rr_max_iter.get(),
+                'rr_tol' : prev.rr_tol.get(),
+                'rr_solver' : prev.rr_solver.get(),
+                'rr_random_state' : prev.rr_random_state.get(),
+                
+                'lassor_include_comp' : prev.lassor_include_comp.get(),
+                'lassor_alpha' : prev.lassor_alpha.get(),
+                'lassor_fit_intercept' : prev.lassor_fit_intercept.get(),
+                'lassor_normalize' : prev.lassor_normalize.get(),
+                'lassor_precompute' : prev.lassor_precompute.get(),
+                'lassor_copy_X' : prev.lassor_copy_X.get(),
+                'lassor_max_iter' : prev.lassor_max_iter.get(),
+                'lassor_tol' : prev.lassor_tol.get(),
+                'lassor_warm_start' : prev.lassor_warm_start.get(),
+                'lassor_positive' : prev.lassor_positive.get(),
+                'lassor_random_state' : prev.lassor_random_state.get(),
+                'lassor_selection' : prev.lassor_selection.get(),
+                
+                'rfr_include_comp' : prev.rfr_include_comp.get(),
+                'rfr_n_estimators' : prev.rfr_n_estimators.get(),
+                'rfr_criterion' : prev.rfr_criterion.get(),
+                'rfr_max_depth' : prev.rfr_max_depth.get(),
+                'rfr_min_samples_split' : prev.rfr_min_samples_split.get(),
+                'rfr_min_samples_leaf' : prev.rfr_min_samples_leaf.get(),
+                'rfr_min_weight_fraction_leaf' : prev.rfr_min_weight_fraction_leaf.get(),
+                'rfr_max_features' : prev.rfr_max_features.get(),
+                'rfr_max_leaf_nodes' : prev.rfr_max_leaf_nodes.get(),
+                'rfr_min_impurity_decrease' : prev.rfr_min_impurity_decrease.get(),
+                'rfr_bootstrap' : prev.rfr_bootstrap.get(),
+                'rfr_oob_score' : prev.rfr_oob_score.get(),
+                'rfr_n_jobs' : prev.rfr_n_jobs.get(),
+                'rfr_random_state' : prev.rfr_random_state.get(),
+                'rfr_verbose' : prev.rfr_verbose.get(),
+                'rfr_warm_start' : prev.rfr_warm_start.get(),
+                'rfr_ccp_alpha' : prev.rfr_ccp_alpha.get(),
+                'rfr_max_samples' : prev.rfr_max_samples.get(),
+                
+                'svr_include_comp' : prev.svr_include_comp.get(),
+                'svr_kernel' : prev.svr_kernel.get(),
+                'svr_degree' : prev.svr_degree.get(),
+                'svr_gamma' : prev.svr_gamma.get(),
+                'svr_coef0' : prev.svr_coef0.get(),
+                'svr_tol' : prev.svr_tol.get(),
+                'svr_C' : prev.svr_C.get(),
+                'svr_epsilon' : prev.svr_epsilon.get(),
+                'svr_shrinking' : prev.svr_shrinking.get(),
+                'svr_cache_size' : prev.svr_cache_size.get(),
+                'svr_verbose' : prev.svr_verbose.get(),
+                'svr_max_iter' : prev.svr_max_iter.get(),
+                
+                'sgdr_include_comp' : prev.sgdr_include_comp.get(),
+                'sgdr_loss' : prev.sgdr_loss.get(),
+                'sgdr_penalty' : prev.sgdr_penalty.get(),
+                'sgdr_alpha' : prev.sgdr_alpha.get(),
+                'sgdr_l1_ratio' : prev.sgdr_l1_ratio.get(),
+                'sgdr_fit_intercept' : prev.sgdr_fit_intercept.get(),
+                'sgdr_max_iter' : prev.sgdr_max_iter.get(),
+                'sgdr_tol' : prev.sgdr_tol.get(),
+                'sgdr_shuffle' : prev.sgdr_shuffle.get(),
+                'sgdr_verbose' : prev.sgdr_verbose.get(),
+                'sgdr_epsilon' : prev.sgdr_epsilon.get(),
+                'sgdr_random_state' : prev.sgdr_random_state.get(),
+                'sgdr_learning_rate' : prev.sgdr_learning_rate.get(),
+                'sgdr_eta0' : prev.sgdr_eta0.get(),
+                'sgdr_power_t' : prev.sgdr_power_t.get(),
+                'sgdr_early_stopping' : prev.sgdr_early_stopping.get(),
+                'sgdr_validation_fraction' : prev.sgdr_validation_fraction.get(),
+                'sgdr_n_iter_no_change' : prev.sgdr_n_iter_no_change.get(),
+                'sgdr_warm_start' : prev.sgdr_warm_start.get(),
+                'sgdr_average' : prev.sgdr_average.get(),
+                
+                'knr_include_comp' : prev.knr_include_comp.get(),
+                'knr_n_neighbors' : prev.knr_n_neighbors.get(),
+                'knr_weights' : prev.knr_weights.get(),
+                'knr_algorithm' : prev.knr_algorithm.get(),
+                'knr_leaf_size' : prev.knr_leaf_size.get(),
+                'knr_p' : prev.knr_p.get(),
+                'knr_metric' : prev.knr_metric.get(),
+                'knr_n_jobs' : prev.knr_n_jobs.get(),
+                
+                'gpr_include_comp' : prev.gpr_include_comp.get(),
+                'gpr_alpha' : prev.gpr_alpha.get(),
+                'gpr_n_restarts_optimizer' : prev.gpr_n_restarts_optimizer.get(),
+                'gpr_normalize_y' : prev.gpr_normalize_y.get(),
+                'gpr_copy_X_train' : prev.gpr_copy_X_train.get(),
+                'gpr_random_state' : prev.gpr_random_state.get(),
+                
+                'dtr_include_comp' : prev.dtr_include_comp.get(),
+                'dtr_criterion' : prev.dtr_criterion.get(),
+                'dtr_splitter' : prev.dtr_splitter.get(),
+                'dtr_max_depth' : prev.dtr_max_depth.get(),
+                'dtr_min_samples_split' : prev.dtr_min_samples_split.get(),
+                'dtr_min_samples_leaf' : prev.dtr_min_samples_leaf.get(),
+                'dtr_min_weight_fraction_leaf' : prev.dtr_min_weight_fraction_leaf.get(),
+                'dtr_max_features' : prev.dtr_max_features.get(),
+                'dtr_random_state' : prev.dtr_random_state.get(),
+                'dtr_max_leaf_nodes' : prev.dtr_max_leaf_nodes.get(),
+                'dtr_min_impurity_decrease' : prev.dtr_min_impurity_decrease.get(),
+                'dtr_ccp_alpha' : prev.dtr_ccp_alpha.get(),
+                
+                'mlpr_include_comp' : prev.mlpr_include_comp.get(),
+                'mlpr_hidden_layer_sizes' : prev.mlpr_hidden_layer_sizes.get(),
+                'mlpr_activation' : prev.mlpr_activation.get(),
+                'mlpr_solver' : prev.mlpr_solver.get(),
+                'mlpr_alpha' : prev.mlpr_alpha.get(),
+                'mlpr_batch_size' : prev.mlpr_batch_size.get(),
+                'mlpr_learning_rate' : prev.mlpr_learning_rate.get(),
+                'mlpr_learning_rate_init' : prev.mlpr_learning_rate_init.get(),
+                'mlpr_power_t' : prev.mlpr_power_t.get(),
+                'mlpr_max_iter' : prev.mlpr_max_iter.get(),
+                'mlpr_shuffle' : prev.mlpr_shuffle.get(),
+                'mlpr_random_state' : prev.mlpr_random_state.get(),
+                'mlpr_tol' : prev.mlpr_tol.get(),
+                'mlpr_verbose' : prev.mlpr_verbose.get(),
+                'mlpr_warm_start' : prev.mlpr_warm_start.get(),
+                'mlpr_momentum' : prev.mlpr_momentum.get(),
+                'mlpr_nesterovs_momentum' : prev.mlpr_nesterovs_momentum.get(),
+                'mlpr_early_stopping' : prev.mlpr_early_stopping.get(),
+                'mlpr_validation_fraction' : prev.mlpr_validation_fraction.get(),
+                'mlpr_beta_1' : prev.mlpr_beta_1.get(),
+                'mlpr_beta_2' : prev.mlpr_beta_2.get(),
+                'mlpr_epsilon' : prev.mlpr_epsilon.get(),
+                'mlpr_n_iter_no_change' : prev.mlpr_n_iter_no_change.get(),
+                'mlpr_max_fun' : prev.mlpr_max_fun.get(),
+
+                'xgbr_include_comp' : prev.xgbr_include_comp.get(),
+                'xgbr_n_estimators' : prev.xgbr_n_estimators.get(),
+                'xgbr_eta' : prev.xgbr_eta.get(),
+                'xgbr_min_child_weight' : prev.xgbr_min_child_weight.get(),
+                'xgbr_max_depth' : prev.xgbr_max_depth.get(),
+                'xgbr_gamma' : prev.xgbr_gamma.get(),
+                'xgbr_subsample' : prev.xgbr_subsample.get(),
+                'xgbr_colsample_bytree' : prev.xgbr_colsample_bytree.get(),
+                'xgbr_lambda' : prev.xgbr_lambda.get(),
+                'xgbr_alpha' : prev.xgbr_alpha.get(),
+                'xgbr_use_gpu' : prev.xgbr_use_gpu.get(),
+                'xgbr_eval_metric' : prev.xgbr_eval_metric.get(),
+                'xgbr_early_stopping' : prev.xgbr_early_stopping.get(),
+                'xgbr_n_iter_no_change' : prev.xgbr_n_iter_no_change.get(),
+                'xgbr_validation_fraction' : prev.xgbr_validation_fraction.get(),
+                'xgbr_cv_voting_mode' : prev.xgbr_cv_voting_mode.get(),
+                'xgbr_cv_voting_folds' : prev.xgbr_cv_voting_folds.get(),
+
+                'cbr_include_comp' : prev.cbr_include_comp.get(),
+                'cbr_eval_metric' : prev.cbr_eval_metric.get(),
+                'cbr_iterations' : prev.cbr_iterations.get(),
+                'cbr_learning_rate' : prev.cbr_learning_rate.get(),
+                'cbr_depth' : prev.cbr_depth.get(),
+                'cbr_reg_lambda' : prev.cbr_reg_lambda.get(),
+                'cbr_subsample' : prev.cbr_subsample.get(),
+                'cbr_colsample_bylevel' : prev.cbr_colsample_bylevel.get(),
+                'cbr_random_strength' : prev.cbr_random_strength.get(),
+                'cbr_use_gpu' : prev.cbr_use_gpu.get(),
+                'cbr_cf_list' : prev.cbr_cf_list.get(),
+                'cbr_early_stopping' : prev.cbr_early_stopping.get(),
+                'cbr_n_iter_no_change' : prev.cbr_n_iter_no_change.get(),
+                'cbr_validation_fraction' : prev.cbr_validation_fraction.get(),
+                'cbr_cv_voting_mode' : prev.cbr_cv_voting_mode.get(),
+                'cbr_cv_voting_folds' : prev.cbr_cv_voting_folds.get(),
+
+                'lgbmr_include_comp' : prev.lgbmr_include_comp.get(),
+                'lgbmr_boosting_type' : prev.lgbmr_boosting_type.get(),
+                'lgbmr_num_leaves' : prev.lgbmr_num_leaves.get(),
+                'lgbmr_max_depth' : prev.lgbmr_max_depth.get(),
+                'lgbmr_learning_rate' : prev.lgbmr_learning_rate.get(),
+                'lgbmr_n_estimators' : prev.lgbmr_n_estimators.get(),
+                'lgbmr_subsample_for_bin' : prev.lgbmr_subsample_for_bin.get(),
+                'lgbmr_min_split_gain' : prev.lgbmr_min_split_gain.get(),
+                'lgbmr_min_child_weight' : prev.lgbmr_min_child_weight.get(),
+                'lgbmr_min_child_samples' : prev.lgbmr_min_child_samples.get(),
+                'lgbmr_subsample' : prev.lgbmr_subsample.get(),
+                'lgbmr_subsample_freq' : prev.lgbmr_subsample_freq.get(),
+                'lgbmr_colsample_bytree' : prev.lgbmr_colsample_bytree.get(),
+                'lgbmr_reg_alpha' : prev.lgbmr_reg_alpha.get(),
+                'lgbmr_reg_lambda' : prev.lgbmr_reg_lambda.get(),
+                'lgbmr_n_jobs' : prev.lgbmr_n_jobs.get(),
+                'lgbmr_silent' : prev.lgbmr_silent.get(),
+                'lgbmr_categorical_feature' : prev.lgbmr_categorical_feature.get(),
+                'lgbmr_eval_metric' : prev.lgbmr_eval_metric.get(),
+                'lgbmr_early_stopping' : prev.lgbmr_early_stopping.get(),
+                'lgbmr_n_iter_no_change' : prev.lgbmr_n_iter_no_change.get(),
+                'lgbmr_validation_fraction' : prev.lgbmr_validation_fraction.get(),
+                'lgbmr_cv_voting_mode' : prev.lgbmr_cv_voting_mode.get(),
+                'lgbmr_cv_voting_folds' : prev.lgbmr_cv_voting_folds.get(),
+            })
+        )
+        save_file.close()
+
+    def load_settings(self, prev, parent):
+        load_file = open(askopenfilename(parent=self.root,
+            filetypes = (("Text files","*.txt"),)
+            ), 'r')
+        settings_dict = eval(load_file.read())
+        for key in settings_dict:
+            getattr(prev, key).set(settings_dict[key])
+            # prev.eval(key).set(settings_dict[key])
+            # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
+        rgr_mtds_specification(prev, parent)

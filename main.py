@@ -36,6 +36,7 @@ myfont2_b = (None, 10, 'bold')
 #configuring main font to be used
 style = ttk.Style()
 style.configure('.', font=myfont)
+style.configure('TButton', padding=(5,1), relief='raised')
 
 #start window class
 class start_window:
@@ -96,6 +97,7 @@ class start_window:
         def set_theme(theme):
             master.set_theme(theme)
             style.configure('.', font=myfont)
+            style.configure('TButton', padding=(5,1), relief='raised')
             master.update()
             open('settings\style.txt', 'w').write(theme)
         style_menu = tk.Menu(settings_menu, tearoff=False)
@@ -144,6 +146,8 @@ class start_window:
             command=lambda: open_site('https://xgboost.readthedocs.io/en/latest/'))
         docs_menu.add_command(label='CatBoost', 
             command=lambda: open_site('https://catboost.ai/docs/concepts/about.html'))
+        docs_menu.add_command(label='LightGBM', 
+            command=lambda: open_site('https://lightgbm.readthedocs.io/en/latest/'))
         help_menu.add_command(label='About', command=open_about_window)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         main_menu.add_cascade(label="Help", menu=help_menu)

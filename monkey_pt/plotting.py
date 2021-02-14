@@ -36,6 +36,7 @@ except ImportError:
     from pandas.tools import plotting
 import matplotlib as mpl
 #mpl.use("TkAgg")
+import seaborn as sns
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.lines import Line2D
@@ -66,6 +67,8 @@ valid_kwds = {'line': ['alpha', 'colormap', 'grid', 'legend', 'linestyle','ms',
             'histogram': ['alpha', 'linewidth','grid','stacked','subplots','colormap',
                      'sharex','sharey','rot','bins', 'logx', 'logy', 'legend', 'edgecolor'],
             'heatmap': ['colormap','colorbar','rot', 'linewidth','linestyle',
+                        'subplots','rot','cscale','bw','alpha','sharex','sharey'],
+            'corrheatmap': ['colormap','colorbar','rot', 'linewidth','linestyle',
                         'subplots','rot','cscale','bw','alpha','sharex','sharey'],
             'area': ['alpha','colormap','grid','linewidth','legend','stacked',
                      'kind','rot','logx','sharex','sharey','subplots'],
@@ -802,6 +805,11 @@ class PlotViewer(Frame):
                 self.showWarning('too many rows to plot')
                 return
             axs = self.heatmap(data, ax, kwargs)
+        elif kind == 'corrheatmap':
+            if len(data) > 1000:
+                self.showWarning('too many rows to plot')
+                return
+            axs = self.corrheatmap(data, ax, kwargs)
         elif kind == 'bootstrap':
             axs = plotting.bootstrap_plot(data)
         elif kind == 'scatter_matrix':
@@ -1112,6 +1120,22 @@ class PlotViewer(Frame):
         #        tick.set_rotation(kwds['rot'])
         #from mpl_toolkits.axes_grid1 import make_axes_locatable
         #divider = make_axes_locatable(ax)
+        return
+
+    def corrheatmap(self, df, ax, kwds):
+        sns_ax = ax
+        X = df._get_numeric_data()
+        mask = np.triu(np.ones_like(X.corr(), dtype=np.bool))
+        # ax.xticks(x, labels, rotation='vertical')
+        sns_ax.set_xticks(np.arange(0.5, len(X.columns)))
+        # ax.set_yticks(np.arange(0.5, len(X.index)))
+        sns_ax.set_xticklabels(X.columns, rotation=45, minor=False)
+        corr_map = sns.heatmap(ax=sns_ax, data=X.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
+        plt.xticks(rotation=45)
+        for item in corr_map.get_xticklabels():
+            item.set_rotation(45)
+        # ax.set_yticklabels(X.index, minor=False)
+        # ax.set_ylim(0, len(X.index))
         return
 
     def venn(self, data, ax, colormap=None, alpha=0.8):
@@ -1454,7 +1478,7 @@ class MPLBaseOptions(TkOptions):
         the selected prefs"""
 
     kinds = ['line', 'scatter', 'bar', 'barh', 'pie', 'histogram', 'boxplot', 'violinplot', 'dotplot',
-             'heatmap', 'area', 'hexbin', 'contour', 'imshow', 'scatter_matrix', 'density', 'radviz', 'venn']
+             'heatmap', 'corrheatmap', 'area', 'hexbin', 'contour', 'imshow', 'scatter_matrix', 'density', 'radviz', 'venn']
     legendlocs = ['best','upper right','upper left','lower left','lower right','right','center left',
                 'center right','lower center','upper center','center']
     defaultfont = 'monospace'
@@ -1628,7 +1652,7 @@ class PlotLayoutOptions(TkOptions):
         frame = LabelFrame(self.main, text='multi views')
         #v = self.multiviewsvar = BooleanVar()
         plot_types = ['histogram','line','scatter','boxplot','dotplot','area','density','bar','barh',
-                      'heatmap','contour','hexbin','imshow']
+                      'heatmap','corrheatmap','contour','hexbin','imshow']
         Label(frame,text='plot types:').pack(fill=X)
         w,v = addListBox(frame, values=plot_types,width=12,height=8)
         w.pack(fill=X)

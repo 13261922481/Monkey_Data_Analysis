@@ -1,6 +1,7 @@
 # Imports
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 import os
 import sys
 import numpy as np
@@ -8,7 +9,7 @@ import webbrowser
 import pandas as pd
 import sklearn
 from monkey_pt import Table
-from utils import Data_Preview, quit_back, open_file, load_data, save_results
+from utils import *
 
 #fonts
 myfont = (None, 13)
@@ -435,15 +436,18 @@ class clust_app:
             values=['Start', 'End'])
         self.combobox9.place(x=150,y=262)
 
-        ttk.Button(self.frame, text='Predict clusters', 
+        ttk.Button(self.frame, text='Predict', width=7,
             command=lambda: 
-                try_clust_predict_cluster(method=self.clust_method.get())).place(x=400, y=230)
+                try_clust_predict_cluster(method=self.clust_method.get())).place(x=400, y=240)
 
-        ttk.Button(self.frame, text='Save results', 
-            command=lambda: save_results(self, self.clust, 'clust result')).place(x=400, y=270)
+        ttk.Button(self.frame, text='Save to file', width=9,
+            command=lambda: save_results(self, self.clust, 'clust result')).place(x=500, y=240)
 
-        ttk.Button(self.frame, text='Quit', 
-                  command=lambda: quit_back(clust_app.root, parent)).place(x=400, y=310)
+        ttk.Button(self.frame, text='Save to sql', width=9,
+            command=lambda: save_to_sql(self, self.clust, 'clust_result')).place(x=500, y=275)
+
+        ttk.Button(self.frame, text='Quit', width=7,
+                  command=lambda: quit_back(clust_app.root, parent)).place(x=400, y=275)
 
 # sub-app for methods' specifications
 class clust_mtds_specification:
@@ -470,7 +474,11 @@ class clust_mtds_specification:
         settings_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label="Settings", menu=settings_menu)
         settings_menu.add_command(label='Restore Defaults', 
-            command=lambda: self.restore_defaults(prev))
+            command=lambda: self.restore_defaults(prev, parent))
+        settings_menu.add_command(label='Save settings', 
+            command=lambda: self.save_settings(prev, parent))
+        settings_menu.add_command(label='Load settings', 
+            command=lambda: self.load_settings(prev, parent))
 
         ttk.Label(self.frame, text='Elbow method', font=myfont_b).place(x=30, y=10)
         ttk.Label(self.frame, text='Metric', font=myfont2).place(x=5, y=40)
@@ -709,74 +717,166 @@ class clust_mtds_specification:
             command=lambda: quit_back(self.root, clust_app.root)).place(relx=0.85, rely=0.92)
 
     # function to restore default parameters
-    def restore_defaults(self, prev):
-        prev.kmeans_init = tk.StringVar(value='k-means++')
-        prev.kmeans_n_init = tk.StringVar(value='10')
-        prev.kmeans_max_iter = tk.StringVar(value='300')
-        prev.kmeans_tol = tk.StringVar(value='1e-4')
-        prev.kmeans_verbose = tk.StringVar(value='0')
-        prev.kmeans_random_state = tk.StringVar(value='None')
-        prev.kmeans_copy_x = tk.BooleanVar(value=True)
-        prev.kmeans_algorithm = tk.StringVar(value='auto')
+    def restore_defaults(self, prev, parent):
+        if tk.messagebox.askyesno("Restore", "Restore default settings?"):
+            prev.kmeans_init = tk.StringVar(value='k-means++')
+            prev.kmeans_n_init = tk.StringVar(value='10')
+            prev.kmeans_max_iter = tk.StringVar(value='300')
+            prev.kmeans_tol = tk.StringVar(value='1e-4')
+            prev.kmeans_verbose = tk.StringVar(value='0')
+            prev.kmeans_random_state = tk.StringVar(value='None')
+            prev.kmeans_copy_x = tk.BooleanVar(value=True)
+            prev.kmeans_algorithm = tk.StringVar(value='auto')
 
-        prev.ap_damping = tk.StringVar(value='0.5')
-        prev.ap_max_iter = tk.StringVar(value='200')
-        prev.ap_convergence_iter = tk.StringVar(value='15')
-        prev.ap_copy = tk.BooleanVar(value=True)
-        prev.ap_verbose = tk.BooleanVar(value=False)
-        prev.ap_random_state = tk.StringVar(value='0')
+            prev.ap_damping = tk.StringVar(value='0.5')
+            prev.ap_max_iter = tk.StringVar(value='200')
+            prev.ap_convergence_iter = tk.StringVar(value='15')
+            prev.ap_copy = tk.BooleanVar(value=True)
+            prev.ap_verbose = tk.BooleanVar(value=False)
+            prev.ap_random_state = tk.StringVar(value='0')
 
-        prev.ms_bandwidth = tk.StringVar(value='None')
-        prev.ms_bin_seeding = tk.BooleanVar(value=False)
-        prev.ms_min_bin_freq = tk.StringVar(value='1')
-        prev.ms_cluster_all = tk.BooleanVar(value=True)
-        prev.ms_n_jobs = tk.StringVar(value='None')
-        prev.ms_max_iter = tk.StringVar(value='300')
+            prev.ms_bandwidth = tk.StringVar(value='None')
+            prev.ms_bin_seeding = tk.BooleanVar(value=False)
+            prev.ms_min_bin_freq = tk.StringVar(value='1')
+            prev.ms_cluster_all = tk.BooleanVar(value=True)
+            prev.ms_n_jobs = tk.StringVar(value='None')
+            prev.ms_max_iter = tk.StringVar(value='300')
 
-        prev.sc_eigen_solver = tk.StringVar(value='arpack')
-        prev.sc_n_components = tk.StringVar(value='None')
-        prev.sc_random_state = tk.StringVar(value='None')
-        prev.sc_n_init = tk.StringVar(value='10')
-        prev.sc_gamma = tk.StringVar(value='1.0')
-        prev.sc_affinity = tk.StringVar(value='rbf')
-        prev.sc_n_neighbors = tk.StringVar(value='None')
-        prev.sc_eigen_tol = tk.StringVar(value='0.0')
-        prev.sc_assign_labels = tk.StringVar(value='kmeans')
-        prev.sc_degree = tk.StringVar(value='3')
-        prev.sc_coef0 = tk.StringVar(value='1')
-        prev.sc_n_jobs = tk.StringVar(value='None')
-        prev.sc_verbose = tk.BooleanVar(value=False)
+            prev.sc_eigen_solver = tk.StringVar(value='arpack')
+            prev.sc_n_components = tk.StringVar(value='None')
+            prev.sc_random_state = tk.StringVar(value='None')
+            prev.sc_n_init = tk.StringVar(value='10')
+            prev.sc_gamma = tk.StringVar(value='1.0')
+            prev.sc_affinity = tk.StringVar(value='rbf')
+            prev.sc_n_neighbors = tk.StringVar(value='None')
+            prev.sc_eigen_tol = tk.StringVar(value='0.0')
+            prev.sc_assign_labels = tk.StringVar(value='kmeans')
+            prev.sc_degree = tk.StringVar(value='3')
+            prev.sc_coef0 = tk.StringVar(value='1')
+            prev.sc_n_jobs = tk.StringVar(value='None')
+            prev.sc_verbose = tk.BooleanVar(value=False)
 
-        prev.ac_affinity = tk.StringVar(value='euclidean')
-        prev.ac_compute_full_tree = tk.StringVar(value='auto')
-        prev.ac_linkage = tk.StringVar(value='ward')
-        prev.ac_distance_threshold = tk.StringVar(value='None')
-        prev.ac_compute_distances = tk.BooleanVar(value=False)
+            prev.ac_affinity = tk.StringVar(value='euclidean')
+            prev.ac_compute_full_tree = tk.StringVar(value='auto')
+            prev.ac_linkage = tk.StringVar(value='ward')
+            prev.ac_distance_threshold = tk.StringVar(value='None')
+            prev.ac_compute_distances = tk.BooleanVar(value=False)
 
-        prev.dbscan_eps = tk.StringVar(value='0.5')
-        prev.dbscan_min_samples = tk.StringVar(value='5')
-        prev.dbscan_metric = tk.StringVar(value='euclidean')
-        prev.dbscan_algorithm = tk.StringVar(value='auto')
-        prev.dbscan_leaf_size = tk.StringVar(value='30')
-        prev.dbscan_p = tk.StringVar(value='None')
-        prev.dbscan_n_jobs = tk.StringVar(value='None')
+            prev.dbscan_eps = tk.StringVar(value='0.5')
+            prev.dbscan_min_samples = tk.StringVar(value='5')
+            prev.dbscan_metric = tk.StringVar(value='euclidean')
+            prev.dbscan_algorithm = tk.StringVar(value='auto')
+            prev.dbscan_leaf_size = tk.StringVar(value='30')
+            prev.dbscan_p = tk.StringVar(value='None')
+            prev.dbscan_n_jobs = tk.StringVar(value='None')
 
-        prev.opt_min_samples = tk.StringVar(value='5')
-        prev.opt_max_eps = tk.StringVar(value='np.inf')
-        prev.opt_metric = tk.StringVar(value='minkowski')
-        prev.opt_p = tk.StringVar(value='2')
-        prev.opt_cluster_method = tk.StringVar(value='xi')
-        prev.opt_eps = tk.StringVar(value='None')
-        prev.opt_xi = tk.StringVar(value='0.05')
-        prev.opt_predecessor_correction = tk.BooleanVar(value=True)
-        prev.opt_min_cluster_size = tk.StringVar(value='None')
-        prev.opt_algorithm = tk.StringVar(value='auto')
-        prev.opt_leaf_size = tk.StringVar(value='30')
-        prev.opt_n_jobs = tk.StringVar(value='None')
+            prev.opt_min_samples = tk.StringVar(value='5')
+            prev.opt_max_eps = tk.StringVar(value='np.inf')
+            prev.opt_metric = tk.StringVar(value='minkowski')
+            prev.opt_p = tk.StringVar(value='2')
+            prev.opt_cluster_method = tk.StringVar(value='xi')
+            prev.opt_eps = tk.StringVar(value='None')
+            prev.opt_xi = tk.StringVar(value='0.05')
+            prev.opt_predecessor_correction = tk.BooleanVar(value=True)
+            prev.opt_min_cluster_size = tk.StringVar(value='None')
+            prev.opt_algorithm = tk.StringVar(value='auto')
+            prev.opt_leaf_size = tk.StringVar(value='30')
+            prev.opt_n_jobs = tk.StringVar(value='None')
 
-        prev.bc_threshold = tk.StringVar(value='0.5')
-        prev.bc_branching_factor = tk.StringVar(value='50')
-        prev.bc_compute_labels = tk.BooleanVar(value=True)
-        prev.bc_copy = tk.BooleanVar(value=True)
+            prev.bc_threshold = tk.StringVar(value='0.5')
+            prev.bc_branching_factor = tk.StringVar(value='50')
+            prev.bc_compute_labels = tk.BooleanVar(value=True)
+            prev.bc_copy = tk.BooleanVar(value=True)
+
+            quit_back(self.root, prev.root)
+            clust_mtds_specification(prev, parent)
+
+    def save_settings(self, prev, parent):
+        save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
+            filetypes = (("Text files","*.txt"),)
+            ), 'w')
+        save_file.write(
+            str({
+                'kmeans_init' : prev.kmeans_init.get(),
+                'kmeans_n_init' : prev.kmeans_n_init.get(),
+                'kmeans_max_iter' : prev.kmeans_max_iter.get(),
+                'kmeans_tol' : prev.kmeans_tol.get(),
+                'kmeans_verbose' : prev.kmeans_verbose.get(),
+                'kmeans_random_state' : prev.kmeans_random_state.get(),
+                'kmeans_copy_x' : prev.kmeans_copy_x.get(),
+                'kmeans_algorithm' : prev.kmeans_algorithm.get(),
+
+                'ap_damping' : prev.ap_damping.get(),
+                'ap_max_iter' : prev.ap_max_iter.get(),
+                'ap_convergence_iter' : prev.ap_convergence_iter.get(),
+                'ap_copy' : prev.ap_copy.get(),
+                'ap_verbose' : prev.ap_verbose.get(),
+                'ap_random_state' : prev.ap_random_state.get(),
+
+                'ms_bandwidth' : prev.ms_bandwidth.get(),
+                'ms_bin_seeding' : prev.ms_bin_seeding.get(),
+                'ms_min_bin_freq' : prev.ms_min_bin_freq.get(),
+                'ms_cluster_all' : prev.ms_cluster_all.get(),
+                'ms_n_jobs' : prev.ms_n_jobs.get(),
+                'ms_max_iter' : prev.ms_max_iter.get(),
+
+                'sc_eigen_solver' : prev.sc_eigen_solver.get(),
+                'sc_n_components' : prev.sc_n_components.get(),
+                'sc_random_state' : prev.sc_random_state.get(),
+                'sc_n_init' : prev.sc_n_init.get(),
+                'sc_gamma' : prev.sc_gamma.get(),
+                'sc_affinity' : prev.sc_affinity.get(),
+                'sc_n_neighbors' : prev.sc_n_neighbors.get(),
+                'sc_eigen_tol' : prev.sc_eigen_tol.get(),
+                'sc_assign_labels' : prev.sc_assign_labels.get(),
+                'sc_degree' : prev.sc_degree.get(),
+                'sc_coef0' : prev.sc_coef0.get(),
+                'sc_n_jobs' : prev.sc_n_jobs.get(),
+                'sc_verbose' : prev.sc_verbose.get(),
+
+                'ac_affinity' : prev.ac_affinity.get(),
+                'ac_compute_full_tree' : prev.ac_compute_full_tree.get(),
+                'ac_linkage' : prev.ac_linkage.get(),
+                'ac_distance_threshold' : prev.ac_distance_threshold.get(),
+                'ac_compute_distances' : prev.ac_compute_distances.get(),
+
+                'dbscan_eps' : prev.dbscan_eps.get(),
+                'dbscan_min_samples' : prev.dbscan_min_samples.get(),
+                'dbscan_metric' : prev.dbscan_metric.get(),
+                'dbscan_algorithm' : prev.dbscan_algorithm.get(),
+                'dbscan_leaf_size' : prev.dbscan_leaf_size.get(),
+                'dbscan_p' : prev.dbscan_p.get(),
+                'dbscan_n_jobs' : prev.dbscan_n_jobs.get(),
+
+                'opt_min_samples' : prev.opt_min_samples.get(),
+                'opt_max_eps' : prev.opt_max_eps.get(),
+                'opt_metric' : prev.opt_metric.get(),
+                'opt_p' : prev.opt_p.get(),
+                'opt_cluster_method' : prev.opt_cluster_method.get(),
+                'opt_eps' : prev.opt_eps.get(),
+                'opt_xi' : prev.opt_xi.get(),
+                'opt_predecessor_correction' : prev.opt_predecessor_correction.get(),
+                'opt_min_cluster_size' : prev.opt_min_cluster_size.get(),
+                'opt_algorithm' : prev.opt_algorithm.get(),
+                'opt_leaf_size' : prev.opt_leaf_size.get(),
+                'opt_n_jobs' :prev.opt_n_jobs.get(),
+
+                'bc_threshold' : prev.bc_threshold.get(),
+                'bc_branching_factor' : prev.bc_branching_factor.get(),
+                'bc_compute_labels' : prev.bc_compute_labels.get(),
+                'bc_copy' : prev.bc_copy.get(),
+            })
+        )
+        save_file.close()
+
+    def load_settings(self, prev, parent):
+        load_file = open(askopenfilename(parent=self.root,
+            filetypes = (("Text files","*.txt"),)
+            ), 'r')
+        settings_dict = eval(load_file.read())
+        for key in settings_dict:
+            getattr(prev, key).set(settings_dict[key])
+            # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
+        clust_mtds_specification(prev, parent)
