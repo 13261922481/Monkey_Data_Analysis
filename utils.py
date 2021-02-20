@@ -390,8 +390,8 @@ class open_sql:
 
 #function to save data to files
 def save_results(prev, main, name='Result'):
-    files = [('Excel', '*.xlsx'),
-             ('csv files', '*.csv'),
+    files = [('csv files', '*.csv'),
+             ('Excel', '*.xlsx'),
              ('All Files', '*.*')] 
     file = asksaveasfilename(parent=prev.frame, filetypes = files, defaultextension = files)
     if file.endswith('.csv'):
@@ -410,82 +410,97 @@ class save_to_sql:
         from sqlalchemy import create_engine
         import pymysql
 
-        if not hasattr(save_to_sql, 'root'):
+        save_to_sql.root = tk.Toplevel(prev.root)
+        w=200
+        h=280
+        ws = self.root.winfo_screenwidth() # width of the screen
+        hs = self.root.winfo_screenheight() # height of the screen
+        #setting main window's parameters       
+        x = (ws/2) - (w/2)
+        y = (hs/2) - (h/2) - 30
+        save_to_sql.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        save_to_sql.root.lift()
+        save_to_sql.root.focus_force()
+        save_to_sql.root.resizable(False, False)
+        save_to_sql.root.title('Connect to SQL Server')
+        self.frame = ttk.Frame(save_to_sql.root, width=w, height=h)
+        self.frame.place(x=0, y=0)
 
-            save_to_sql.root = tk.Toplevel(prev.root)
-            w=200
-            h=280
-            ws = self.root.winfo_screenwidth() # width of the screen
-            hs = self.root.winfo_screenheight() # height of the screen
-            #setting main window's parameters       
-            x = (ws/2) - (w/2)
-            y = (hs/2) - (h/2) - 30
-            save_to_sql.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-            save_to_sql.root.lift()
-            save_to_sql.root.focus_force()
-            save_to_sql.root.resizable(False, False)
-            save_to_sql.root.title('Connect to SQL Server')
-            self.frame = ttk.Frame(save_to_sql.root, width=w, height=h)
-            self.frame.place(x=0, y=0)
+        ttk.Label(self.frame, text='Connect to SQL Server', font=myfont).place(x=10, y=10)
 
-            ttk.Label(self.frame, text='Connect to SQL Server', font=myfont).place(x=10, y=10)
+        ttk.Label(self.frame, text='SQL Server', font=myfont1).place(x=10, y=50)
+        save_to_sql.sql_server_var = tk.StringVar(value='MySQL')
+        self.combobox1 = ttk.Combobox(self.frame, textvariable=save_to_sql.sql_server_var, 
+            width=10, values=['MySQL'])
+        self.combobox1.place(x=100,y=53)
 
-            ttk.Label(self.frame, text='SQL Server', font=myfont1).place(x=10, y=50)
-            save_to_sql.sql_server_var = tk.StringVar(value='MySQL')
-            self.combobox1 = ttk.Combobox(self.frame, textvariable=save_to_sql.sql_server_var, 
-                width=10, values=['MySQL'])
-            self.combobox1.place(x=100,y=53)
+        ttk.Label(self.frame, text='User', font=myfont1).place(x=10, y=80)
+        save_to_sql.sql_user_var = tk.StringVar()
+        self.user_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_user_var, 
+            width=10, font=myfont2)
+        self.user_entry.place(x=100,y=83)
 
-            ttk.Label(self.frame, text='User', font=myfont1).place(x=10, y=80)
-            save_to_sql.sql_user_var = tk.StringVar()
-            self.user_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_user_var, 
-                width=10, font=myfont2)
-            self.user_entry.place(x=100,y=83)
+        ttk.Label(self.frame, text='Password', font=myfont1).place(x=10, y=110)
+        save_to_sql.sql_pw_var = tk.StringVar()
+        self.pw_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_pw_var, 
+            width=10, font=myfont2)
+        self.pw_entry.place(x=100,y=113)
 
-            ttk.Label(self.frame, text='Password', font=myfont1).place(x=10, y=110)
-            save_to_sql.sql_pw_var = tk.StringVar()
-            self.pw_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_pw_var, 
-                width=10, font=myfont2)
-            self.pw_entry.place(x=100,y=113)
+        ttk.Label(self.frame, text='Host', font=myfont1).place(x=10, y=140)
+        save_to_sql.sql_host_var = tk.StringVar()
+        self.host_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_host_var, 
+            width=10, font=myfont2)
+        self.host_entry.place(x=100,y=143)
 
-            ttk.Label(self.frame, text='Host', font=myfont1).place(x=10, y=140)
-            save_to_sql.sql_host_var = tk.StringVar()
-            self.host_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_host_var, 
-                width=10, font=myfont2)
-            self.host_entry.place(x=100,y=143)
+        ttk.Label(self.frame, text='Database', font=myfont1).place(x=10, y=170)
+        save_to_sql.sql_db_var = tk.StringVar()
+        self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_db_var, 
+            width=10, font=myfont2)
+        self.db_entry.place(x=100,y=173)
 
-            ttk.Label(self.frame, text='Database', font=myfont1).place(x=10, y=170)
-            save_to_sql.sql_db_var = tk.StringVar()
-            self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_db_var, 
-                width=10, font=myfont2)
-            self.db_entry.place(x=100,y=173)
+        ttk.Label(self.frame, text='Table name', font=myfont1).place(x=10, y=200)
+        save_to_sql.sql_table_var = tk.StringVar()
+        self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_table_var, 
+            width=10, font=myfont2)
+        self.db_entry.place(x=100,y=203)
+        self.db_entry.insert(0, name)
 
-            ttk.Label(self.frame, text='Table name', font=myfont1).place(x=10, y=200)
-            save_to_sql.sql_table_var = tk.StringVar()
-            self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_table_var, 
-                width=10, font=myfont2)
-            self.db_entry.place(x=100,y=203)
-            self.db_entry.insert(0, name)
+        def _save_to_sql():
+            if save_to_sql.sql_server_var.get()=='MySQL':
+                db_connection_str = ('mysql+pymysql://' + save_to_sql.sql_user_var.get() + 
+                    ':' + save_to_sql.sql_pw_var.get() + '@' + save_to_sql.sql_host_var.get() +
+                    '/' + save_to_sql.sql_db_var.get())
+                db_connection = create_engine(db_connection_str)
 
-            def _save_to_sql():
-                if save_to_sql.sql_server_var.get()=='MySQL':
-                    db_connection_str = ('mysql+pymysql://' + save_to_sql.sql_user_var.get() + 
-                        ':' + save_to_sql.sql_pw_var.get() + '@' + save_to_sql.sql_host_var.get() +
-                        '/' + save_to_sql.sql_db_var.get())
-                    db_connection = create_engine(db_connection_str)
+                from sqlalchemy import event
+                @event.listens_for(db_connection, "before_cursor_execute")
+                def receive_before_cursor_execute(
+                   conn, cursor, statement, params, context, executemany
+                    ):
+                        if executemany:
+                            cursor.fast_executemany = True
 
-                pd.DataFrame(main.data).to_sql(save_to_sql.sql_table_var.get(), con=db_connection)
+                # def set_d_type_dict(df):
+                #     type_dict = {}
+                #     for i, j in zip(df.columns, df.dtypes):
+                #         if "object" in str(j):
+                #             type_dict.update({i: VARCHAR(512)})
+                #         if "float" in str(j):
+                #             type_dict.update({i: DECIMAL(19, 2)})
+                #         if "int" in str(j):
+                #             type_dict.update({i: DECIMAL(19)})
+                #     return type_dict
 
-                save_to_sql.root.withdraw()
+                # d_type = set_d_type_dict(pd.DataFrame(main.data))
 
-            ttk.Button(self.frame, text='Save to SQL', width=10,
-                command=lambda: _save_to_sql()).place(x=50, y=240)
-                
+                pd.DataFrame(main.data).to_sql(save_to_sql.sql_table_var.get(), con=db_connection,
+                    method='multi', chunksize=2000
+                )
 
-            save_to_sql.root.protocol("WM_DELETE_WINDOW", lambda: save_to_sql.root.withdraw())
-        else:
-            save_to_sql.root.deiconify()
-            save_to_sql.root.lift()
+            save_to_sql.root.withdraw()
+
+        ttk.Button(self.frame, text='Save to SQL', width=10,
+            command=lambda: _save_to_sql()).place(x=50, y=240)
 
 # function to restart the program from inside
 def restart_app():

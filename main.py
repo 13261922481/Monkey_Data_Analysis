@@ -37,6 +37,8 @@ myfont2_b = (None, 10, 'bold')
 style = ttk.Style()
 style.configure('.', font=myfont)
 style.configure('TButton', padding=(5,1), relief='raised')
+style.configure('TCheckbutton', padding=(1,1))
+style.configure('TNotebook.Tab', font=myfont)
 
 #start window class
 class start_window:
@@ -98,6 +100,7 @@ class start_window:
             master.set_theme(theme)
             style.configure('.', font=myfont)
             style.configure('TButton', padding=(5,1), relief='raised')
+            style.configure('TCheckbutton', padding=(1,1))
             master.update()
             open('settings\style.txt', 'w').write(theme)
         style_menu = tk.Menu(settings_menu, tearoff=False)
