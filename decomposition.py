@@ -20,7 +20,7 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # app for data decompostion (dimensionality reduction)
-class dcmp_app:
+class DcmpApp:
     # sub-class for decomposition-related data
     class decomposition:
         def __init__(self):
@@ -45,14 +45,14 @@ class dcmp_app:
         h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
-        dcmp_app.root = tk.Toplevel(parent)
-        dcmp_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        dcmp_app.root.title('Monkey Decomposition')
-        dcmp_app.root.lift()
-        dcmp_app.root.tkraise()
-        dcmp_app.root.focus_force()
-        dcmp_app.root.resizable(False, False)
-        dcmp_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(dcmp_app.root, parent))
+        DcmpApp.root = tk.Toplevel(parent)
+        DcmpApp.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        DcmpApp.root.title('Monkey Decomposition')
+        DcmpApp.root.lift()
+        DcmpApp.root.tkraise()
+        DcmpApp.root.focus_force()
+        DcmpApp.root.resizable(False, False)
+        DcmpApp.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(DcmpApp.root, parent))
 
         parent.iconify()
 
@@ -245,11 +245,11 @@ class dcmp_app:
             if self.decomposition.Viewed.get() == True:
                 self.decomposition.pt = Table(self.decomposition.view_frame, 
                     dataframe=self.decomposition.data, showtoolbar=True, showstatusbar=True, 
-                    height=350, notebook=Data_Preview.notebook.nb, dp_main=self.decomposition)
+                    height=350, notebook=DataPreview.notebook.nb, dp_main=self.decomposition)
                 self.decomposition.pt.show()
                 self.decomposition.pt.redraw()
-                Data_Preview.notebook.nb.select(self.decomposition.view_frame)
-                Data_Preview.root.lift()
+                DataPreview.notebook.nb.select(self.decomposition.view_frame)
+                DataPreview.root.lift()
 
         # run decomposition
         def try_decompose(method):
@@ -260,10 +260,10 @@ class dcmp_app:
 
         # Application interface
 
-        self.bg_frame = ttk.Frame(dcmp_app.root, width=10, height=h)
+        self.bg_frame = ttk.Frame(DcmpApp.root, width=10, height=h)
         self.bg_frame.place(x=0, y=0)
 
-        self.frame = ttk.Frame(dcmp_app.root, width=w, height=h)
+        self.frame = ttk.Frame(DcmpApp.root, width=w, height=h)
         self.frame.place(x=10, y=0)
 
         ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
@@ -291,7 +291,7 @@ class dcmp_app:
 
         ttk.Button(self.frame, text='View/Change', 
             command=lambda: 
-                Data_Preview(self, self.decomposition, 'dcmp', parent)).place(x=230, y=95)
+                DataPreview(self, self.decomposition, 'dcmp', parent)).place(x=230, y=95)
 
         ttk.Label(self.frame, text='Number of features:', font=myfont1).place(x=30, y=140)
         self.n_features_var = tk.StringVar(value='All')
@@ -300,7 +300,7 @@ class dcmp_app:
         self.n_features_entry.place(x=170, y=142)
 
         ttk.Button(self.frame, text="Methods' specifications", 
-            command=lambda: dcmp_mtds_specification(self, parent)).place(x=400, y=100)
+            command=lambda: DcmpMethodsSpecifications(self, parent)).place(x=400, y=100)
 
         ttk.Label(self.frame, text='X from', font=myfont1).place(x=225, y=130)
         self.dcmp_x_from_combobox = ttk.Combobox(self.frame, 
@@ -342,13 +342,13 @@ class dcmp_app:
                 self.decomposition, 'dcmp result')).place(x=500, y=240)
 
         ttk.Button(self.frame, text='Save to sql', width=9,
-            command=lambda: save_to_sql(self, self.decomposition, 'dcmp_result')).place(x=500, y=275)
+            command=lambda: SaveToSQL(self, self.decomposition, 'dcmp_result')).place(x=500, y=275)
 
         ttk.Button(self.frame, text='Quit', width=10,
-                  command=lambda: quit_back(dcmp_app.root, parent)).place(x=385, y=275)
+                  command=lambda: quit_back(DcmpApp.root, parent)).place(x=385, y=275)
 
 # methods' specifications
-class dcmp_mtds_specification:
+class DcmpMethodsSpecifications:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
@@ -505,7 +505,7 @@ class dcmp_mtds_specification:
         fica_e3.place(x=540, y=275)
 
         ttk.Button(self.root, text='OK', width=5,
-            command=lambda: quit_back(self.root, dcmp_app.root)).place(relx=0.8, rely=0.92)
+            command=lambda: quit_back(self.root, DcmpApp.root)).place(relx=0.8, rely=0.92)
 
     # restore default values
     def restore_defaults(self, prev, parent):
@@ -552,7 +552,7 @@ class dcmp_mtds_specification:
             prev.fica_random_state = tk.StringVar(value='None')
 
             quit_back(self.root, prev.root)
-            dcmp_mtds_specification(prev, parent)
+            DcmpMethodsSpecifications(prev, parent)
 
     def save_settings(self, prev, parent):
         save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
@@ -613,4 +613,4 @@ class dcmp_mtds_specification:
             # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
-        dcmp_mtds_specification(prev, parent)
+        DcmpMethodsSpecifications(prev, parent)

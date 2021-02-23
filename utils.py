@@ -20,36 +20,36 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # App to view/change data. Based on dmnfarrell's pandastable
-class Data_Preview:
+class DataPreview:
     class notebook:
         def __init__(self):
             pass
     def __init__(self, prev, main, full, parent):
         global data_view_frame, w, h
         if main.data is not None and main.Viewed.get()==False:
-            if not hasattr(Data_Preview, 'root'):
-                Data_Preview.root = tk.Toplevel(parent)
+            if not hasattr(DataPreview, 'root'):
+                DataPreview.root = tk.Toplevel(parent)
                 w = 650
                 h = 650
-                data_view_frame = ttk.Frame(Data_Preview.root, width=w, height=h)
+                data_view_frame = ttk.Frame(DataPreview.root, width=w, height=h)
                 data_view_frame.place(y=0)
                 #setting main window's parameters       
                 x = (parent.ws/2) - (w/2)
                 y = (parent.hs/2) - (h/2) - 30
-                Data_Preview.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-                Data_Preview.root.resizable(False, False)
-                Data_Preview.root.title('Data Viewer')
+                DataPreview.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+                DataPreview.root.resizable(False, False)
+                DataPreview.root.title('Data Viewer')
 
-            if not hasattr(Data_Preview.notebook, 'nb'):
-                Data_Preview.notebook.nb = ttk.Notebook(data_view_frame)
-                Data_Preview.notebook.nb.place(y=0)
+            if not hasattr(DataPreview.notebook, 'nb'):
+                DataPreview.notebook.nb = ttk.Notebook(data_view_frame)
+                DataPreview.notebook.nb.place(y=0)
             
-            main.view_frame = ttk.Frame(Data_Preview.root, width=w, height=(h-50))
-            Data_Preview.notebook.nb.add(main.view_frame, text=full)
-            Data_Preview.notebook.nb.select(main.view_frame)
+            main.view_frame = ttk.Frame(DataPreview.root, width=w, height=(h-50))
+            DataPreview.notebook.nb.add(main.view_frame, text=full)
+            DataPreview.notebook.nb.select(main.view_frame)
             
             main.pt = Table(main.view_frame, dataframe=main.data, showtoolbar=True, 
-                showstatusbar=True, height=450, notebook=Data_Preview.notebook.nb, dp_main=main)
+                showstatusbar=True, height=450, notebook=DataPreview.notebook.nb, dp_main=main)
             main.pt.show()
             ttk.Button(main.view_frame, text='Update Data', command=lambda: 
                        self.update_data(prev, main, main.pt.model.df, full)).place(x=10, y=530)
@@ -57,73 +57,73 @@ class Data_Preview:
                 command=lambda: self.upd_quit(main.view_frame, prev, main, 
                 main.pt.model.df, full)).place(x=450, y=530)
             
-            ttk.Button(main.view_frame, text='Drop NA', 
-                command=lambda: self.drop_na(main)).place(x=130, y=530)
-            ttk.Button(main.view_frame, text='Fill NA', 
+            ttk.Button(main.view_frame, text='Drop NA', width=7,
+                command=lambda: self.drop_na(main)).place(x=140, y=530)
+            ttk.Button(main.view_frame, text='Fill NA', width=7,
                 command=lambda: self.fill_na(parent, main)).place(x=235, y=530)
 
             ttk.Button(data_view_frame, text='Create Table', 
-                       command=lambda: self.create_new_table(Data_Preview.notebook.nb)).place(x=10, y=610)
+                       command=lambda: self.create_new_table(DataPreview.notebook.nb)).place(x=10, y=610)
             ttk.Button(data_view_frame, text='Back', 
-                command=lambda: Data_Preview.root.withdraw()).place(x=480, y=610)
+                command=lambda: DataPreview.root.withdraw()).place(x=480, y=610)
 
-            Data_Preview.root.deiconify()
-            Data_Preview.root.lift()
+            DataPreview.root.deiconify()
+            DataPreview.root.lift()
 
             def on_closing():
-                Data_Preview.root.withdraw()
+                DataPreview.root.withdraw()
 
-            Data_Preview.root.protocol("WM_DELETE_WINDOW", on_closing)
+            DataPreview.root.protocol("WM_DELETE_WINDOW", on_closing)
 
             main.Viewed.set(True)
 
         elif main.data is not None and main.Viewed.get()==True:
-            Data_Preview.root.deiconify()
-            Data_Preview.root.lift()
+            DataPreview.root.deiconify()
+            DataPreview.root.lift()
 
         elif main.data is None:
-            if not hasattr(Data_Preview, 'root'):
-                Data_Preview.root = tk.Toplevel(parent)
+            if not hasattr(DataPreview, 'root'):
+                DataPreview.root = tk.Toplevel(parent)
                 w = 650
                 h = 650
-                data_view_frame = ttk.Frame(Data_Preview.root, width=w, height=h)
+                data_view_frame = ttk.Frame(DataPreview.root, width=w, height=h)
                 data_view_frame.place(y=0)
                 #setting main window's parameters       
                 x = (parent.ws/2) - (w/2)
                 y = (parent.hs/2) - (h/2) - 30
-                Data_Preview.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-                Data_Preview.root.resizable(False, False)
-                Data_Preview.root.title('Data Viewer')
+                DataPreview.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+                DataPreview.root.resizable(False, False)
+                DataPreview.root.title('Data Viewer')
 
-            if not hasattr(Data_Preview.notebook, 'nb'):
-                Data_Preview.notebook.nb = ttk.Notebook(data_view_frame)
-                Data_Preview.notebook.nb.place(y=0)
+            if not hasattr(DataPreview.notebook, 'nb'):
+                DataPreview.notebook.nb = ttk.Notebook(data_view_frame)
+                DataPreview.notebook.nb.place(y=0)
 
             ttk.Button(data_view_frame, text='Create Table', 
-                       command=lambda: self.create_new_table(Data_Preview.notebook.nb)).place(x=10, y=610)
+                       command=lambda: self.create_new_table(DataPreview.notebook.nb)).place(x=10, y=610)
             ttk.Button(data_view_frame, text='Back', 
-                command=lambda: Data_Preview.root.withdraw()).place(x=480, y=610)
+                command=lambda: DataPreview.root.withdraw()).place(x=480, y=610)
 
-            Data_Preview.root.deiconify()
-            Data_Preview.root.lift()
+            DataPreview.root.deiconify()
+            DataPreview.root.lift()
 
             def on_closing():
-                Data_Preview.root.withdraw()
+                DataPreview.root.withdraw()
 
-            Data_Preview.root.protocol("WM_DELETE_WINDOW", on_closing)
+            DataPreview.root.protocol("WM_DELETE_WINDOW", on_closing)
 
         if not hasattr(self, 'tables'):
             self.tables = 1
 
     # function to create new clear table
     def create_new_table(self, notebook):
-        nt_frame = ttk.Frame(Data_Preview.root, width=w, height=(h-50))
-        Data_Preview.notebook.nb.add(nt_frame, text='New table{}'.format(self.tables))
+        nt_frame = ttk.Frame(DataPreview.root, width=w, height=(h-50))
+        DataPreview.notebook.nb.add(nt_frame, text='New table{}'.format(self.tables))
         self.tables += 1
         new_pt = Table(nt_frame, dataframe=None, showtoolbar=True, showstatusbar=True, 
-            height=450, notebook=Data_Preview.notebook.nb)
+            height=450, notebook=DataPreview.notebook.nb)
         new_pt.show()
-        Data_Preview.notebook.nb.select(nt_frame)
+        DataPreview.notebook.nb.select(nt_frame)
 
     # function to update viewed data
     def update_data(self, prev, main, table, full):
@@ -166,11 +166,11 @@ class Data_Preview:
         main.pt.storeCurrent()
         self.df = self.df.dropna(axis=0)
         main.pt = Table(main.view_frame, dataframe=self.df, showtoolbar=True, showstatusbar=True, 
-            height=450, notebook=Data_Preview.notebook.nb, dp_main=main)
+            height=450, notebook=DataPreview.notebook.nb, dp_main=main)
         main.pt.show()
     # function to fill nan's in different ways
     def fill_na(self, parent, main):
-        self.fn_win = tk.Toplevel(Data_Preview.root)
+        self.fn_win = tk.Toplevel(DataPreview.root)
         w=200
         h=250
         #setting main window's parameters       
@@ -276,20 +276,22 @@ def load_data(app, main, entry, data_type):
             app.dcmp_x_to_combobox.set(main.data.columns[-1])
         if main.Viewed.get() == True:
             main.pt = Table(main.view_frame, dataframe=main.data, showtoolbar=True, 
-                showstatusbar=True, height=450, notebook=Data_Preview.notebook.nb, dp_main=main)
+                showstatusbar=True, height=450, notebook=DataPreview.notebook.nb, dp_main=main)
             main.pt.show()
-            Data_Preview.root.lift()
+            DataPreview.root.lift()
     if len(data_file) > 1 and data_file.endswith('.sql'):
-        open_sql(app, main, entry, data_type)
+        app.opensql = OpenSQL(app, main, entry, data_type)
+        app.opensql
+        # OpenSQL(app, main, entry, data_type)
 
-class open_sql:
+class OpenSQL:
     def __init__(self, app, main, entry, data_type):
         from sqlalchemy import create_engine
         import pymysql
 
-        if not hasattr(open_sql, 'root'):
+        if not hasattr(self, 'root'):
 
-            open_sql.root = tk.Toplevel(app.root)
+            self.root = tk.Toplevel(app.root)
             w=200
             h=250
             ws = self.root.winfo_screenwidth() # width of the screen
@@ -297,51 +299,51 @@ class open_sql:
             #setting main window's parameters       
             x = (ws/2) - (w/2)
             y = (hs/2) - (h/2) - 30
-            open_sql.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-            open_sql.root.lift()
-            open_sql.root.focus_force()
-            open_sql.root.resizable(False, False)
-            open_sql.root.title('Connect to SQL Server')
-            self.frame = ttk.Frame(open_sql.root, width=w, height=h)
+            self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+            self.root.lift()
+            self.root.focus_force()
+            self.root.resizable(False, False)
+            self.root.title('Connect to SQL Server')
+            self.frame = ttk.Frame(self.root, width=w, height=h)
             self.frame.place(x=0, y=0)
 
             ttk.Label(self.frame, text='Connect to SQL Server', font=myfont).place(x=10, y=10)
 
             ttk.Label(self.frame, text='SQL Server', font=myfont1).place(x=10, y=50)
-            open_sql.sql_server_var = tk.StringVar(value='MySQL')
-            self.combobox1 = ttk.Combobox(self.frame, textvariable=open_sql.sql_server_var, 
+            OpenSQL.sql_server_var = tk.StringVar(value='MySQL')
+            self.combobox1 = ttk.Combobox(self.frame, textvariable=OpenSQL.sql_server_var, 
                 width=10, values=['MySQL'])
             self.combobox1.place(x=100,y=53)
 
             ttk.Label(self.frame, text='User', font=myfont1).place(x=10, y=80)
-            open_sql.sql_user_var = tk.StringVar()
-            self.user_entry = ttk.Entry(self.frame, textvariable=open_sql.sql_user_var, 
+            OpenSQL.sql_user_var = tk.StringVar()
+            self.user_entry = ttk.Entry(self.frame, textvariable=OpenSQL.sql_user_var, 
                 width=10, font=myfont2)
             self.user_entry.place(x=100,y=83)
 
             ttk.Label(self.frame, text='Password', font=myfont1).place(x=10, y=110)
-            open_sql.sql_pw_var = tk.StringVar()
-            self.pw_entry = ttk.Entry(self.frame, textvariable=open_sql.sql_pw_var, 
+            OpenSQL.sql_pw_var = tk.StringVar()
+            self.pw_entry = ttk.Entry(self.frame, textvariable=OpenSQL.sql_pw_var, 
                 width=10, font=myfont2)
             self.pw_entry.place(x=100,y=113)
 
             ttk.Label(self.frame, text='Host', font=myfont1).place(x=10, y=140)
-            open_sql.sql_host_var = tk.StringVar()
-            self.host_entry = ttk.Entry(self.frame, textvariable=open_sql.sql_host_var, 
+            OpenSQL.sql_host_var = tk.StringVar()
+            self.host_entry = ttk.Entry(self.frame, textvariable=OpenSQL.sql_host_var, 
                 width=10, font=myfont2)
             self.host_entry.place(x=100,y=143)
 
             ttk.Label(self.frame, text='Database', font=myfont1).place(x=10, y=170)
-            open_sql.sql_db_var = tk.StringVar()
-            self.db_entry = ttk.Entry(self.frame, textvariable=open_sql.sql_db_var, 
+            OpenSQL.sql_db_var = tk.StringVar()
+            self.db_entry = ttk.Entry(self.frame, textvariable=OpenSQL.sql_db_var, 
                 width=10, font=myfont2)
             self.db_entry.place(x=100,y=173)
 
             def load_sql():
-                if open_sql.sql_server_var.get()=='MySQL':
-                    db_connection_str = ('mysql+pymysql://' + open_sql.sql_user_var.get() + 
-                        ':' + open_sql.sql_pw_var.get() + '@' + open_sql.sql_host_var.get() +
-                        '/' + open_sql.sql_db_var.get())
+                if OpenSQL.sql_server_var.get()=='MySQL':
+                    db_connection_str = ('mysql+pymysql://' + OpenSQL.sql_user_var.get() + 
+                        ':' + OpenSQL.sql_pw_var.get() + '@' + OpenSQL.sql_host_var.get() +
+                        '/' + OpenSQL.sql_db_var.get())
                     db_connection = create_engine(db_connection_str)
 
                     query = open(data_file, 'r').read()
@@ -375,18 +377,18 @@ class open_sql:
                     app.dcmp_x_to_combobox.set(main.data.columns[-1])
                 if main.Viewed.get() == True:
                     main.pt = Table(main.view_frame, dataframe=main.data, showtoolbar=True, 
-                        showstatusbar=True, height=450, notebook=Data_Preview.notebook.nb, dp_main=main)
+                        showstatusbar=True, height=450, notebook=DataPreview.notebook.nb, dp_main=main)
                     main.pt.show()
-                    Data_Preview.root.lift()
-                open_sql.root.withdraw()
+                    DataPreview.root.lift()
+                self.root.withdraw()
 
             ttk.Button(self.frame, text='Load SQL', width=10,
                 command=lambda: load_sql()).place(x=50, y=210)
 
-            open_sql.root.protocol("WM_DELETE_WINDOW", lambda: open_sql.root.withdraw())
+            self.root.protocol("WM_DELETE_WINDOW", lambda: self.root.withdraw())
         else:
-            open_sql.root.deiconify()
-            open_sql.root.lift()
+            self.root.deiconify()
+            self.root.lift()
 
 #function to save data to files
 def save_results(prev, main, name='Result'):
@@ -405,12 +407,12 @@ def save_results(prev, main, name='Result'):
         pd.DataFrame(main.data).to_excel(file, sheet_name=name, 
             index=False, header=(False if main.header_var.get()==0 else True))
 
-class save_to_sql:
+class SaveToSQL:
     def __init__(self, prev, main, name='Result'):
         from sqlalchemy import create_engine
         import pymysql
 
-        save_to_sql.root = tk.Toplevel(prev.root)
+        SaveToSQL.root = tk.Toplevel(prev.root)
         w=200
         h=280
         ws = self.root.winfo_screenwidth() # width of the screen
@@ -418,58 +420,58 @@ class save_to_sql:
         #setting main window's parameters       
         x = (ws/2) - (w/2)
         y = (hs/2) - (h/2) - 30
-        save_to_sql.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        save_to_sql.root.lift()
-        save_to_sql.root.focus_force()
-        save_to_sql.root.resizable(False, False)
-        save_to_sql.root.title('Connect to SQL Server')
-        self.frame = ttk.Frame(save_to_sql.root, width=w, height=h)
+        SaveToSQL.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        SaveToSQL.root.lift()
+        SaveToSQL.root.focus_force()
+        SaveToSQL.root.resizable(False, False)
+        SaveToSQL.root.title('Connect to SQL Server')
+        self.frame = ttk.Frame(SaveToSQL.root, width=w, height=h)
         self.frame.place(x=0, y=0)
 
         ttk.Label(self.frame, text='Connect to SQL Server', font=myfont).place(x=10, y=10)
 
         ttk.Label(self.frame, text='SQL Server', font=myfont1).place(x=10, y=50)
-        save_to_sql.sql_server_var = tk.StringVar(value='MySQL')
-        self.combobox1 = ttk.Combobox(self.frame, textvariable=save_to_sql.sql_server_var, 
+        SaveToSQL.sql_server_var = tk.StringVar(value='MySQL')
+        self.combobox1 = ttk.Combobox(self.frame, textvariable=SaveToSQL.sql_server_var, 
             width=10, values=['MySQL'])
         self.combobox1.place(x=100,y=53)
 
         ttk.Label(self.frame, text='User', font=myfont1).place(x=10, y=80)
-        save_to_sql.sql_user_var = tk.StringVar()
-        self.user_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_user_var, 
+        SaveToSQL.sql_user_var = tk.StringVar()
+        self.user_entry = ttk.Entry(self.frame, textvariable=SaveToSQL.sql_user_var, 
             width=10, font=myfont2)
         self.user_entry.place(x=100,y=83)
 
         ttk.Label(self.frame, text='Password', font=myfont1).place(x=10, y=110)
-        save_to_sql.sql_pw_var = tk.StringVar()
-        self.pw_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_pw_var, 
+        SaveToSQL.sql_pw_var = tk.StringVar()
+        self.pw_entry = ttk.Entry(self.frame, textvariable=SaveToSQL.sql_pw_var, 
             width=10, font=myfont2)
         self.pw_entry.place(x=100,y=113)
 
         ttk.Label(self.frame, text='Host', font=myfont1).place(x=10, y=140)
-        save_to_sql.sql_host_var = tk.StringVar()
-        self.host_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_host_var, 
+        SaveToSQL.sql_host_var = tk.StringVar()
+        self.host_entry = ttk.Entry(self.frame, textvariable=SaveToSQL.sql_host_var, 
             width=10, font=myfont2)
         self.host_entry.place(x=100,y=143)
 
         ttk.Label(self.frame, text='Database', font=myfont1).place(x=10, y=170)
-        save_to_sql.sql_db_var = tk.StringVar()
-        self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_db_var, 
+        SaveToSQL.sql_db_var = tk.StringVar()
+        self.db_entry = ttk.Entry(self.frame, textvariable=SaveToSQL.sql_db_var, 
             width=10, font=myfont2)
         self.db_entry.place(x=100,y=173)
 
         ttk.Label(self.frame, text='Table name', font=myfont1).place(x=10, y=200)
-        save_to_sql.sql_table_var = tk.StringVar()
-        self.db_entry = ttk.Entry(self.frame, textvariable=save_to_sql.sql_table_var, 
+        SaveToSQL.sql_table_var = tk.StringVar()
+        self.db_entry = ttk.Entry(self.frame, textvariable=SaveToSQL.sql_table_var, 
             width=10, font=myfont2)
         self.db_entry.place(x=100,y=203)
         self.db_entry.insert(0, name)
 
         def _save_to_sql():
-            if save_to_sql.sql_server_var.get()=='MySQL':
-                db_connection_str = ('mysql+pymysql://' + save_to_sql.sql_user_var.get() + 
-                    ':' + save_to_sql.sql_pw_var.get() + '@' + save_to_sql.sql_host_var.get() +
-                    '/' + save_to_sql.sql_db_var.get())
+            if SaveToSQL.sql_server_var.get()=='MySQL':
+                db_connection_str = ('mysql+pymysql://' + SaveToSQL.sql_user_var.get() + 
+                    ':' + SaveToSQL.sql_pw_var.get() + '@' + SaveToSQL.sql_host_var.get() +
+                    '/' + SaveToSQL.sql_db_var.get())
                 db_connection = create_engine(db_connection_str)
 
                 from sqlalchemy import event
@@ -493,11 +495,11 @@ class save_to_sql:
 
                 # d_type = set_d_type_dict(pd.DataFrame(main.data))
 
-                pd.DataFrame(main.data).to_sql(save_to_sql.sql_table_var.get(), con=db_connection,
-                    method='multi', chunksize=2000
+                pd.DataFrame(main.data).to_sql(SaveToSQL.sql_table_var.get(), con=db_connection,
+                    method='multi', chunksize=2000, index=False
                 )
 
-            save_to_sql.root.withdraw()
+            SaveToSQL.root.withdraw()
 
         ttk.Button(self.frame, text='Save to SQL', width=10,
             command=lambda: _save_to_sql()).place(x=50, y=240)

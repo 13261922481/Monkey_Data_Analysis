@@ -20,13 +20,13 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # App to do clustering
-class clust_app:
+class ClustApp:
     # sub-class for clustering-related data
     class clust:
         def __init__(self):
             pass
     # elbow method
-    class elbow_method:
+    class ElbowMethod:
         def __init__(self, prev, main, parent):
             from sklearn.cluster import KMeans
             from yellowbrick.cluster import KElbowVisualizer
@@ -47,7 +47,7 @@ class clust_app:
             visualizer.fit(X_St)
             visualizer.show()
     # dendrogram
-    class show_dendrogram:
+    class ShowDendrogram:
         def __init__(self, prev, main, parent):
             from scipy.cluster.hierarchy import dendrogram, linkage
             from matplotlib import pyplot as plt
@@ -88,28 +88,28 @@ class clust_app:
         h = 350 
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
-        clust_app.root = tk.Toplevel(parent)
-        clust_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        clust_app.root.title('Monkey Clustering')
-        clust_app.root.lift()
-        clust_app.root.tkraise()
-        clust_app.root.focus_force()
-        clust_app.root.resizable(False, False)
-        clust_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(clust_app.root, parent))
+        ClustApp.root = tk.Toplevel(parent)
+        ClustApp.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        ClustApp.root.title('Monkey Clustering')
+        ClustApp.root.lift()
+        ClustApp.root.tkraise()
+        ClustApp.root.focus_force()
+        ClustApp.root.resizable(False, False)
+        ClustApp.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(ClustApp.root, parent))
 
         parent.iconify()
 
         # run elbow method
         def try_elbow_method(prev, main, parent):
             try:
-                self.elbow_method(prev, main, parent)
+                self.ElbowMethod(prev, main, parent)
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
         # show dendrogram
         def try_show_dendrogram(prev, main, parent):
             try:
-                self.show_dendrogram(prev, main, parent)
+                self.ShowDendrogram(prev, main, parent)
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -341,11 +341,11 @@ class clust_app:
             if self.clust.Viewed.get() == True:
                 self.clust.pt = Table(self.clust.view_frame, dataframe=self.clust.data, 
                     showtoolbar=True, showstatusbar=True, height=350, 
-                    notebook=Data_Preview.notebook.nb, dp_main=self.clust)
+                    notebook=DataPreview.notebook.nb, dp_main=self.clust)
                 self.clust.pt.show()
                 self.clust.pt.redraw()
-                Data_Preview.notebook.nb.select(self.clust.view_frame)
-                Data_Preview.root.lift()
+                DataPreview.notebook.nb.select(self.clust.view_frame)
+                DataPreview.root.lift()
             
         # run clustering
         def try_clust_predict_cluster(method):
@@ -356,10 +356,10 @@ class clust_app:
 
         # Application interface
 
-        self.bg_frame = ttk.Frame(clust_app.root, width=10, height=h)
+        self.bg_frame = ttk.Frame(ClustApp.root, width=10, height=h)
         self.bg_frame.place(x=0, y=0)
 
-        self.frame = ttk.Frame(clust_app.root, width=w, height=h)
+        self.frame = ttk.Frame(ClustApp.root, width=w, height=h)
         self.frame.place(x=10, y=0)
 
         ttk.Label(self.frame, text='Data file:').place(x=30, y=10)
@@ -386,7 +386,7 @@ class clust_app:
         self.clust.data_status.place(x=120, y=95)
 
         ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.clust, 'clust', parent)).place(x=230, y=95)
+            command=lambda: DataPreview(self, self.clust, 'clust', parent)).place(x=230, y=95)
 
         ttk.Label(self.frame, text='Number of clusters:', font=myfont1).place(x=30, y=140)
         self.n_clusters_var = tk.StringVar(value='2')
@@ -395,7 +395,7 @@ class clust_app:
         self.n_clusters_entry.place(x=170, y=142)
 
         ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: clust_mtds_specification(self, parent)).place(x=400, y=100)
+                  command=lambda: ClustMethodsSpecifications(self, parent)).place(x=400, y=100)
 
         ttk.Button(self.frame, text='Elbow method', width=12, 
             command=lambda: try_elbow_method(self, self.clust, parent)).place(x=400, y=140)
@@ -444,13 +444,13 @@ class clust_app:
             command=lambda: save_results(self, self.clust, 'clust result')).place(x=500, y=240)
 
         ttk.Button(self.frame, text='Save to sql', width=9,
-            command=lambda: save_to_sql(self, self.clust, 'clust_result')).place(x=500, y=275)
+            command=lambda: SaveToSQL(self, self.clust, 'clust_result')).place(x=500, y=275)
 
         ttk.Button(self.frame, text='Quit', width=7,
-                  command=lambda: quit_back(clust_app.root, parent)).place(x=400, y=275)
+                  command=lambda: quit_back(ClustApp.root, parent)).place(x=400, y=275)
 
 # sub-app for methods' specifications
-class clust_mtds_specification:
+class ClustMethodsSpecifications:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
@@ -714,7 +714,7 @@ class clust_mtds_specification:
         bc_cb2.place(x=740, y=460)
 
         ttk.Button(self.root, text='OK', width=5,
-            command=lambda: quit_back(self.root, clust_app.root)).place(relx=0.85, rely=0.92)
+            command=lambda: quit_back(self.root, ClustApp.root)).place(relx=0.85, rely=0.92)
 
     # function to restore default parameters
     def restore_defaults(self, prev, parent):
@@ -789,7 +789,7 @@ class clust_mtds_specification:
             prev.bc_copy = tk.BooleanVar(value=True)
 
             quit_back(self.root, prev.root)
-            clust_mtds_specification(prev, parent)
+            ClustMethodsSpecifications(prev, parent)
 
     def save_settings(self, prev, parent):
         save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
@@ -879,4 +879,4 @@ class clust_mtds_specification:
             # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
-        clust_mtds_specification(prev, parent)
+        ClustMethodsSpecifications(prev, parent)

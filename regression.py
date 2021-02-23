@@ -21,7 +21,7 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # App to do regression
-class rgr_app:
+class RegressionApp:
     # sub-class for training-related data
     class training:
         def __init__(self):
@@ -31,7 +31,7 @@ class rgr_app:
         def __init__(self):
             pass
     # App to show comparison results
-    class Comp_results:
+    class ComparisonResults:
         def __init__(self, prev, parent):
             self.root = tk.Toplevel(parent)
             #setting main window's parameters     
@@ -131,11 +131,11 @@ class rgr_app:
             else:
                 ttk.Label(self.frame, text="nan", font=myfont1).place(x=200,y=420)
 
-            ttk.Button(self.frame, text='OK', 
+            ttk.Button(self.frame, text='OK', width=5,
                 command=lambda: quit_back(self.root, prev.root)).place(x=90, y=460)
 
     # App to do grid search for hyperparameters
-    class Grid_search:
+    class GridSearch:
         def __init__(self, prev, parent):
             self.root = tk.Toplevel(parent)
             #setting main window's parameters      
@@ -424,14 +424,14 @@ class rgr_app:
         h = 500    
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
-        rgr_app.root = tk.Toplevel(parent)
-        rgr_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        rgr_app.root.title('Monkey Regression')
-        rgr_app.root.lift()
-        rgr_app.root.tkraise()
-        rgr_app.root.focus_force()
-        rgr_app.root.resizable(False, False)
-        rgr_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(rgr_app.root, parent))
+        RegressionApp.root = tk.Toplevel(parent)
+        RegressionApp.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        RegressionApp.root.title('Monkey Regression')
+        RegressionApp.root.lift()
+        RegressionApp.root.tkraise()
+        RegressionApp.root.focus_force()
+        RegressionApp.root.resizable(False, False)
+        RegressionApp.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(RegressionApp.root, parent))
 
         parent.iconify()
 
@@ -1439,7 +1439,7 @@ class rgr_app:
             self.pb1.destroy()
             self.stop_button.destroy()
             self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-                command=lambda: self.Comp_results(self, parent))
+                command=lambda: self.ComparisonResults(self, parent))
             self.show_res_button.place(x=400, y=165)
 
         # function to stop comparison
@@ -1476,7 +1476,7 @@ class rgr_app:
                 self.pb1.destroy()
                 self.stop_button.destroy()
                 self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-                    command=lambda: self.Comp_results(self, parent))
+                    command=lambda: self.ComparisonResults(self, parent))
                 self.show_res_button.place(x=400, y=165)
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -2127,11 +2127,11 @@ class rgr_app:
                 if self.prediction.Viewed.get() == True:
                     self.prediction.pt = Table(self.prediction.view_frame, 
                         dataframe=self.prediction.data, showtoolbar=True, showstatusbar=True, 
-                        height=350, notebook=Data_Preview.notebook.nb, dp_main=self.prediction)
+                        height=350, notebook=DataPreview.notebook.nb, dp_main=self.prediction)
                     self.prediction.pt.show()
                     self.prediction.pt.redraw()
-                    Data_Preview.notebook.nb.select(self.prediction.view_frame)
-                    Data_Preview.root.lift()
+                    DataPreview.notebook.nb.select(self.prediction.view_frame)
+                    DataPreview.root.lift()
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -2166,10 +2166,10 @@ class rgr_app:
 
         # Application interface
 
-        self.bg_frame = ttk.Frame(rgr_app.root, width=10, height=h)
+        self.bg_frame = ttk.Frame(RegressionApp.root, width=10, height=h)
         self.bg_frame.place(x=0, y=0)
 
-        self.frame = ttk.Frame(rgr_app.root, width=w, height=h)
+        self.frame = ttk.Frame(RegressionApp.root, width=w, height=h)
         self.frame.place(x=10, y=0)
         
         ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
@@ -2197,18 +2197,18 @@ class rgr_app:
         self.training.data_status.place(x=120, y=95)
 
         ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.training, 
+            command=lambda: DataPreview(self, self.training, 
                 'rgr training', parent)).place(x=230, y=95)
 
         ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: rgr_mtds_specification(self, parent)).place(x=400, y=95)
+                  command=lambda: RgrMethodsSpecifications(self, parent)).place(x=400, y=95)
         ttk.Button(self.frame, text='Perform comparison', 
             command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
         self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-            command=lambda: self.Comp_results(self, parent))
+            command=lambda: self.ComparisonResults(self, parent))
 
         ttk.Button(self.frame, text='Grid Search', 
-            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
+            command=lambda: self.GridSearch(self, parent)).place(x=400, y=200)
         
         ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
         self.y_var = tk.StringVar()
@@ -2273,7 +2273,7 @@ class rgr_app:
         self.prediction.data_status.place(x=120, y=385)
 
         ttk.Button(self.frame, text='View/Change', command=lambda: 
-            Data_Preview(self, self.prediction, 
+            DataPreview(self, self.prediction, 
                 'rgr prediction', parent)).place(x=230, y=375)
         
         self.pr_method = tk.StringVar(value='Least squares')
@@ -2304,15 +2304,15 @@ class rgr_app:
             command=lambda: 
                 try_make_regression(method=self.pr_method.get())).place(x=400, y=395)
         ttk.Button(self.frame, text='Quit', width=7,
-            command=lambda: quit_back(rgr_app.root, parent)).place(x=400, y=430)
+            command=lambda: quit_back(RegressionApp.root, parent)).place(x=400, y=430)
         
         ttk.Button(self.frame, text='Save to file', width=9,
             command=lambda: save_results(self, self.prediction, 'rgr result')).place(x=500, y=395)
         ttk.Button(self.frame, text='Save to sql', width=9,
-            command=lambda: save_to_sql(self, self.prediction, 'rgr_result')).place(x=500, y=430)
+            command=lambda: SaveToSQL(self, self.prediction, 'rgr_result')).place(x=500, y=430)
 
 # sub-app for methods' specifications  
-class rgr_mtds_specification:
+class RgrMethodsSpecifications:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
@@ -3012,7 +3012,7 @@ class rgr_mtds_specification:
         lgb_e18.place(x=540,y=190)
         
         ttk.Button(self.root, text='OK', width=5,
-            command=lambda: quit_back(self.root, rgr_app.root)).place(relx=0.82, rely=0.92)
+            command=lambda: quit_back(self.root, RegressionApp.root)).place(relx=0.82, rely=0.92)
 
     # function to restore default parameters
     def restore_defaults(self, prev, parent):
@@ -3217,7 +3217,7 @@ class rgr_mtds_specification:
             prev.lgbmr_cv_voting_folds = tk.StringVar(value='5')
 
             quit_back(self.root, prev.root)
-            rgr_mtds_specification(prev, parent)
+            RgrMethodsSpecifications(prev, parent)
 
     def save_settings(self, prev, parent):
         save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
@@ -3438,4 +3438,4 @@ class rgr_mtds_specification:
             # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
-        rgr_mtds_specification(prev, parent)
+        RgrMethodsSpecifications(prev, parent)

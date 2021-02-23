@@ -41,7 +41,7 @@ style.configure('TCheckbutton', padding=(1,1))
 style.configure('TNotebook.Tab', font=myfont)
 
 #start window class
-class start_window:
+class StartWindow:
     def __init__(self):
         # Setting geometrical things
         w = 500
@@ -50,14 +50,14 @@ class start_window:
         master.ws = master.winfo_screenwidth() # width of the screen
         master.hs = master.winfo_screenheight() # height of the screen
         
-        start_window.frame =ttk.Frame(master, width=w, height=h)
-        start_window.frame.place(x=0, y=0)
+        StartWindow.frame =ttk.Frame(master, width=w, height=h)
+        StartWindow.frame.place(x=0, y=0)
         
         # placing funny monkey
         img_name1 = 'imgs/ML/monkey1.png'
         img_path1 = os.path.join(application_path, img_name1)
         img1 = tk.PhotoImage(file=img_path1)
-        panel = tk.Label(start_window.frame, image = img1)
+        panel = tk.Label(StartWindow.frame, image = img1)
         panel.place(relx=0.04, rely=0.15)
 
         # instead of closing apps, which leads to losing data, we just iconify/deiconify it
@@ -67,14 +67,14 @@ class start_window:
             else:
                 app.root.deiconify()
         
-        ttk.Button(start_window.frame, text='Classification', width=12, 
-            command=lambda: run_app(clf_app)).place(x=300, y=80)
-        ttk.Button(start_window.frame, text='Regression', width=12, 
-            command=lambda: run_app(rgr_app)).place(x=300, y=130)
-        ttk.Button(start_window.frame, text='Clustering', width=12, 
-            command=lambda: run_app(clust_app)).place(x=300, y=180)
-        ttk.Button(start_window.frame, text='Decomposition', width=12, 
-            command=lambda: run_app(dcmp_app)).place(x=300, y=230)
+        ttk.Button(StartWindow.frame, text='Classification', width=12, 
+            command=lambda: run_app(ClassificationApp)).place(x=300, y=80)
+        ttk.Button(StartWindow.frame, text='Regression', width=12, 
+            command=lambda: run_app(RegressionApp)).place(x=300, y=130)
+        ttk.Button(StartWindow.frame, text='Clustering', width=12, 
+            command=lambda: run_app(ClustApp)).place(x=300, y=180)
+        ttk.Button(StartWindow.frame, text='Decomposition', width=12, 
+            command=lambda: run_app(DcmpApp)).place(x=300, y=230)
 
         #setting main window's parameters       
         x = (master.ws/2) - (w/2)
@@ -87,10 +87,10 @@ class start_window:
         master.resizable(False, False)
         
         #setting application icon
-        start_window.img_ico = 'imgs\ML\logo1.png'
-        start_window.img_ico_path = os.path.join(application_path, start_window.img_ico)
-        start_window.ico_photo = tk.PhotoImage(file=start_window.img_ico_path)
-        master.iconphoto(True, start_window.ico_photo)
+        StartWindow.img_ico = 'imgs\ML\logo1.png'
+        StartWindow.img_ico_path = os.path.join(application_path, StartWindow.img_ico)
+        StartWindow.ico_photo = tk.PhotoImage(file=StartWindow.img_ico_path)
+        master.iconphoto(True, StartWindow.ico_photo)
         #Creating menus
         main_menu = tk.Menu(master)
         master.config(menu=main_menu)
@@ -160,4 +160,4 @@ class start_window:
 #run the program with multiprocessing support
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    start_window()
+    StartWindow()

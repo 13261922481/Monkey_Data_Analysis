@@ -21,7 +21,7 @@ myfont2 = (None, 10)
 myfont2_b = (None, 10, 'bold')
 
 # App to do classification
-class clf_app:
+class ClassificationApp:
     # sub-class for training-related data
     class training:
         def __init__(self):
@@ -31,13 +31,13 @@ class clf_app:
         def __init__(self):
             pass
     # App to show comparison results
-    class Comp_results:
+    class ComparisonResults:
         def __init__(self, prev, parent):
 
             self.root = tk.Toplevel(parent)
             #setting main window's parameters   
             w = 250
-            h = 430    
+            h = 450    
             x = (parent.ws/2) - (w/2)
             y = (parent.hs/2) - (h/2) - 30
             self.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
@@ -62,6 +62,7 @@ class clf_app:
             ttk.Label(self.frame, text='Multi-layer Perceptron:', font=myfont1).place(x=10,y=270)
             ttk.Label(self.frame, text='XGBoost:', font=myfont1).place(x=10,y=300)
             ttk.Label(self.frame, text='CatBoost:', font=myfont1).place(x=10,y=330)
+            ttk.Label(self.frame, text='LightGBM:', font=myfont1).place(x=10,y=360)
 
             if 'dtc' in prev.scores.keys():
                 ttk.Label(self.frame, text="{:.4f}". format(prev.scores['dtc']), 
@@ -113,11 +114,16 @@ class clf_app:
                     font=myfont1).place(x=200,y=330)
             else:
                 ttk.Label(self.frame, text="nan", font=myfont1).place(x=200,y=330)
+            if 'lgbmc' in prev.scores.keys():
+                ttk.Label(self.frame, text="{:.4f}". format(prev.scores['lgbmc']), 
+                    font=myfont1).place(x=200,y=360)
+            else:
+                ttk.Label(self.frame, text="nan", font=myfont1).place(x=200,y=360)
 
-            ttk.Button(self.frame, text='OK', 
-                command=lambda: quit_back(self.root, prev.root)).place(x=110, y=380)
+            ttk.Button(self.frame, text='OK', width=5,
+                command=lambda: quit_back(self.root, prev.root)).place(x=110, y=410)
     # App to do grid search for hyperparameters
-    class Grid_search:
+    class GridSearch:
         def __init__(self, prev, parent):
             self.root = tk.Toplevel(parent)
             #setting main window's parameters 
@@ -391,15 +397,15 @@ class clf_app:
         h = 500   
         x = (parent.ws/2) - (w/2)
         y = (parent.hs/2) - (h/2) - 30
-        clf_app.root = tk.Toplevel(parent)
-        clf_app.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        clf_app.root.title('Monkey Classification')
-        clf_app.root.lift()
-        clf_app.root.tkraise()
-        clf_app.root.focus_force()
-        clf_app.root.resizable(False, False)
+        ClassificationApp.root = tk.Toplevel(parent)
+        ClassificationApp.root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        ClassificationApp.root.title('Monkey Classification')
+        ClassificationApp.root.lift()
+        ClassificationApp.root.tkraise()
+        ClassificationApp.root.focus_force()
+        ClassificationApp.root.resizable(False, False)
 
-        clf_app.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(clf_app.root, parent))
+        ClassificationApp.root.protocol("WM_DELETE_WINDOW", lambda: quit_back(ClassificationApp.root, parent))
 
         parent.iconify()
         
@@ -1157,32 +1163,16 @@ class clf_app:
                                     print('LGBM Done')
                     elif self.x_st_var.get() == 'Yes' and self.lgbmc_early_stopping.get()==False:
                         for fold in folds_list:
-                            for train_index, test_index in fold.split(prev.X_St):
-                                if self.continue_flag:
-                                    lgbmc.fit(
-                                        prev.X_St[train_index], prev.y[train_index],
-                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
-                                            else eval(self.lgbmc_categorical_feature.get()))
-                                    )
-                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X_St[test_index]), 
-                                        prev.y[test_index])
-                                    lgbmc_scores = np.append(lgbmc_scores, score)
-                                    self.pb1.step(1)
-                                    print('LGBM Done')
+                            if self.continue_flag:
+                                lgbmc_scores = np.append(lgbmc_scores, 
+                                    cross_val_score(lgbmc, prev.X_St, prev.y, cv=fold))
+                                self.pb1.step(1)
                     else:
                         for fold in folds_list:
-                            for train_index, test_index in fold.split(prev.X):
-                                if self.continue_flag:
-                                    lgbmc.fit(
-                                        prev.X.iloc[train_index], prev.y[train_index],
-                                        categorical_feature=('auto' if self.lgbmc_categorical_feature.get()=='auto'
-                                            else eval(self.lgbmc_categorical_feature.get()))
-                                    )
-                                    score = sklearn.metrics.accuracy_score(lgbmc.predict(prev.X.iloc[test_index]), 
-                                        prev.y[test_index])
-                                    lgbmc_scores = np.append(lgbmc_scores, score)
-                                    self.pb1.step(1)
-                                    print('LGBM Done')
+                            if self.continue_flag:
+                                lgbmc_scores = np.append(lgbmc_scores, 
+                                    cross_val_score(lgbmc, prev.X, prev.y, cv=fold))
+                                self.pb1.step(1)
                     self.scores['lgbmc'] = lgbmc_scores.mean()
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
@@ -1191,7 +1181,7 @@ class clf_app:
             self.pb1.destroy()
             self.stop_button.destroy()
             self.show_res_button = ttk.Button(self.frame, 
-                text='Show Results', command=lambda: self.Comp_results(self, parent))
+                text='Show Results', command=lambda: self.ComparisonResults(self, parent))
             self.show_res_button.place(x=400, y=165)
 
         # function to stop comparison
@@ -1226,7 +1216,7 @@ class clf_app:
                 self.pb1.destroy()
                 self.stop_button.destroy()
                 self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-                    command=lambda: self.Comp_results(self, parent))
+                    command=lambda: self.ComparisonResults(self, parent))
                 self.show_res_button.place(x=400, y=165)
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -1822,11 +1812,11 @@ class clf_app:
                 if self.prediction.Viewed.get() == True:
                     self.prediction.pt = Table(self.prediction.view_frame, 
                         dataframe=self.prediction.data, showtoolbar=True, showstatusbar=True, 
-                        height=350, notebook=Data_Preview.notebook.nb, dp_main=self.prediction)
+                        height=350, notebook=DataPreview.notebook.nb, dp_main=self.prediction)
                     self.prediction.pt.show()
                     self.prediction.pt.redraw()
-                    Data_Preview.notebook.nb.select(self.prediction.view_frame)
-                    Data_Preview.root.lift()
+                    DataPreview.notebook.nb.select(self.prediction.view_frame)
+                    DataPreview.root.lift()
             except ValueError as e:
                 messagebox.showerror(parent=self.root, message='Error: "{}"'.format(e))
 
@@ -1861,10 +1851,10 @@ class clf_app:
 
         # Application interface
 
-        self.bg_frame = ttk.Frame(clf_app.root, width=10, height=h)
+        self.bg_frame = ttk.Frame(ClassificationApp.root, width=10, height=h)
         self.bg_frame.place(x=0, y=0)
 
-        self.frame = ttk.Frame(clf_app.root, width=w, height=h)
+        self.frame = ttk.Frame(ClassificationApp.root, width=w, height=h)
         self.frame.place(x=10, y=0)
         
         ttk.Label(self.frame, text='Train Data file:', font=myfont1).place(x=10, y=10)
@@ -1891,18 +1881,18 @@ class clf_app:
         self.training.data_status.place(x=120, y=95)
 
         ttk.Button(self.frame, text='View/Change', 
-            command=lambda: Data_Preview(self, self.training, 
+            command=lambda: DataPreview(self, self.training, 
                 'clf training', parent)).place(x=230, y=95)
 
         ttk.Button(self.frame, text="Methods' specifications", 
-                  command=lambda: clf_mtds_specification(self, parent)).place(x=400, y=95)
+                  command=lambda: ClfMethodsSpecifications(self, parent)).place(x=400, y=95)
         ttk.Button(self.frame, text='Perform comparison', 
             command=lambda: try_compare_methods(self, self.training)).place(x=400, y=130)
         self.show_res_button = ttk.Button(self.frame, text='Show Results', 
-            command=lambda: self.Comp_results(self, parent))
+            command=lambda: self.ComparisonResults(self, parent))
         
         ttk.Button(self.frame, text='Grid Search', 
-            command=lambda: self.Grid_search(self, parent)).place(x=400, y=200)
+            command=lambda: self.GridSearch(self, parent)).place(x=400, y=200)
         
         ttk.Label(self.frame, text='Choose y', font=myfont1).place(x=30, y=140)
         self.y_var = tk.StringVar()
@@ -1965,7 +1955,7 @@ class clf_app:
         self.prediction.data_status.place(x=120, y=385)
 
         ttk.Button(self.frame, text='View/Change', command=lambda: 
-            Data_Preview(self, self.prediction, 
+            DataPreview(self, self.prediction, 
                 'rgr prediction', parent)).place(x=230, y=375)
         
         self.pr_method = tk.StringVar(value='Decision Tree')
@@ -1995,15 +1985,15 @@ class clf_app:
             command=lambda: 
                 try_clf_predict_class(method=self.pr_method.get())).place(x=400, y=395)
         ttk.Button(self.frame, text='Quit', width=7,
-            command=lambda: quit_back(clf_app.root, parent)).place(x=400, y=430)
+            command=lambda: quit_back(ClassificationApp.root, parent)).place(x=400, y=430)
         
         ttk.Button(self.frame, text='Save to file', width=9,
             command=lambda: save_results(self, self.prediction, 'clf result')).place(x=500, y=395)
         ttk.Button(self.frame, text='Save to sql', width=9,
-            command=lambda: save_to_sql(self, self.prediction, 'clf_result')).place(x=500, y=430)
+            command=lambda: SaveToSQL(self, self.prediction, 'clf_result')).place(x=500, y=430)
 
 # sub-app for methods' specifications    
-class clf_mtds_specification:
+class ClfMethodsSpecifications:
     def __init__(self, prev, parent):
         self.root = tk.Toplevel(parent)
 
@@ -2640,7 +2630,7 @@ class clf_mtds_specification:
         lgb_e18.place(x=540,y=190)
 
         ttk.Button(self.root, text='OK', width=5,
-            command=lambda: quit_back(self.root, clf_app.root)).place(relx=0.85, rely=0.92)
+            command=lambda: quit_back(self.root, ClassificationApp.root)).place(relx=0.85, rely=0.92)
 
         self.root.lift()
 
@@ -2831,7 +2821,7 @@ class clf_mtds_specification:
             prev.lgbmc_cv_voting_folds = tk.StringVar(value='5')
 
             quit_back(self.root, prev.root)
-            clf_mtds_specification(prev, parent)
+            ClfMethodsSpecifications(prev, parent)
 
     def save_settings(self, prev, parent):
         save_file = open(asksaveasfilename(parent=self.root, defaultextension=".txt",
@@ -3035,4 +3025,4 @@ class clf_mtds_specification:
             # setattr(prev, key, tk.StringVar(value=settings_dict[key]))
 
         quit_back(self.root, prev.root)
-        clf_mtds_specification(prev, parent)
+        ClfMethodsSpecifications(prev, parent)
